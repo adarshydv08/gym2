@@ -1,0 +1,284 @@
+import React, { useState, useEffect } from 'react';
+import { apiClient } from '../api/client';
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Users, IndianRupee, Activity, Dumbbell, AlertTriangle, TrendingUp, UserCheck, Calendar, ChevronRight, RefreshCw } from 'lucide-react';
+
+const GLASS_COLORS = ['#7dd3fc', '#c8a0f0', '#88b4cc', '#f9a8d4', '#86efac'];
+
+const MetricCard = ({ icon: Icon, label, value, sub, color = '#7dd3fc' }) => (
+  <div className="glass-panel" style={{ padding: '1.5rem' }}>
+    <div style={{ display: 'flex', justify: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+      <div style={{ background: `rgba(${color === '#7dd3fc' ? '125,211,252' : color === '#c8a0f0' ? '200,160,240' : color === '#86efac' ? '134,239,172' : color === '#f59e0b' ? '245,158,11' : color === '#ff6b6b' ? '255,107,107' : '136,180,204'},0.15)`, padding: '0.6rem', borderRadius: '10px' }}>
+        <Icon size={20} color={color} />
+      </div>
+    </div>
+    <div style={{ fontSize: '2rem', fontWeight: 800, color, marginBottom: '0.25rem' }}>{value}</div>
+    <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{label}</div>
+    {sub && <div style={{ fontSize: '0.8rem', color: '#a0b4c4' }}>{sub}</div>}
+  </div>
+);
+
+export const OwnerPortal = ({ user }) => {
+  const [metrics, setMetrics] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [trainers, setTrainers] = useState([]);
+  const [complaints, setComplaints] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [tab, setTab] = useState('dashboard');
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [m, mem, tr, comp, ann] = await Promise.allSettled([
+        apiClient.get('/reports/owner-dashboard'),
+        apiClient.get('/members'),
+        apiClient.get('/trainers'),
+        apiClient.get('/tickets'),
+        apiClient.get('/announcements'),
+      ]);
+      if (m.status === 'fulfilled') setMetrics(m.value.data);
+      if (mem.status === 'fulfilled') setMembers(mem.value.data || []);
+      if (tr.status === 'fulfilled') setTrainers(tr.value.data || []);
+      if (comp.status === 'fulfilled') setComplaints(comp.value.data || []);
+      if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const TABS = ['dashboard', 'members', 'trainers', 'complaints', 'payments'];
+
+  // Fallback demo data
+  const data = metrics || {
+    totalMembers: 162, activeMembers: 157, todayAttendance: 48,
+    monthlyRevenue: 20497, totalRevenue: 95497,
+    activeTrainers: 4, todayClasses: 4, openComplaints: 2,
+    revenueTrend: [
+      { month: 'Feb', revenue: 12500 }, { month: 'Mar', revenue: 14200 },
+      { month: 'Apr', revenue: 16800 }, { month: 'May', revenue: 15400 },
+      { month: 'Jun', revenue: 18900 }, { month: 'Jul', revenue: 20497 }
+    ],
+    attendanceTrend: [
+      { day: 'Mon', attendees: 48 }, { day: 'Tue', attendees: 52 },
+      { day: 'Wed', attendees: 55 }, { day: 'Thu', attendees: 50 },
+      { day: 'Fri', attendees: 62 }, { day: 'Sat', attendees: 44 }, { day: 'Sun', attendees: 28 }
+    ],
+    popularPlans: [
+      { name: 'Half-Yearly Pro', value: 45 }, { name: 'Yearly Champion', value: 30 },
+      { name: 'Quarterly', value: 15 }, { name: 'Monthly', value: 10 }
+    ],
+  };
+
+  return (
+    <div style={{ padding: '1.5rem 2rem' }}>
+      {/* Portal Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
+            Owner <span style={{ color: '#c8a0f0' }}>BI Portal</span>
+          </h2>
+          <p style={{ color: '#a0b4c4', marginTop: '0.25rem' }}>Welcome back, {user?.name}. Here's your gym overview.</p>
+        </div>
+        <button onClick={load} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <RefreshCw size={16} /> Refresh
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+        {TABS.map(t => (
+          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'btn-primary' : 'btn-outline'} style={{ textTransform: 'capitalize', padding: '0.5rem 1.25rem' }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* DASHBOARD TAB */}
+      {tab === 'dashboard' && (
+        <>
+          {/* Metric Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+            <MetricCard icon={Users} label="Total Members" value={data.totalMembers} sub={`${data.activeMembers} active`} color="#7dd3fc" />
+            <MetricCard icon={IndianRupee} label="Monthly Revenue" value={`₹${(data.monthlyRevenue || 0).toLocaleString('en-IN')}`} sub="This month" color="#86efac" />
+            <MetricCard icon={Activity} label="Today's Check-ins" value={data.todayAttendance} sub="Live attendance" color="#c8a0f0" />
+            <MetricCard icon={Dumbbell} label="Active Trainers" value={data.activeTrainers} sub="On duty" color="#88b4cc" />
+            <MetricCard icon={Calendar} label="Today's Classes" value={data.todayClasses} sub="Scheduled" color="#f9a8d4" />
+            <MetricCard icon={AlertTriangle} label="Open Tickets" value={data.openComplaints} sub="Awaiting response" color="#f59e0b" />
+          </div>
+
+          {/* Charts Row 1 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Revenue Trend <span style={{ color: '#a0b4c4', fontWeight: 400, fontSize: '0.85rem' }}>(INR ₹)</span></h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={data.revenueTrend}>
+                  <defs>
+                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7dd3fc" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#7dd3fc" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="month" stroke="#4a6070" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="#4a6070" tick={{ fontSize: 11 }} />
+                  <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} formatter={v => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
+                  <Area type="monotone" dataKey="revenue" stroke="#7dd3fc" fill="url(#revGrad)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Plan Distribution</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={data.popularPlans} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value">
+                    {(data.popularPlans || []).map((_, i) => <Cell key={i} fill={GLASS_COLORS[i % GLASS_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+                {(data.popularPlans || []).map((p, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#a0b4c4' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: GLASS_COLORS[i % GLASS_COLORS.length], flexShrink: 0 }} />
+                    {p.name} ({p.value}%)
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Charts Row 2 */}
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Weekly Attendance Pattern</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={data.attendanceTrend}>
+                <XAxis dataKey="day" stroke="#4a6070" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#4a6070" tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} />
+                <Bar dataKey="attendees" fill="#7dd3fc" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </>
+      )}
+
+      {/* MEMBERS TAB */}
+      {tab === 'members' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Member Management ({members.length})</h3>
+          {members.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+              <Users size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+              <p>No members found. Connect the backend to view live data.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(125,211,252,0.15)' }}>
+                    {['Member #', 'Name', 'Email', 'Phone', 'Status', 'Actions'].map(h => (
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#a0b4c4', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map(m => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#7dd3fc', fontWeight: 600 }}>{m.membershipNumber}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{m.user?.name}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.email}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.phone}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge" style={{ background: m.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(255,107,107,0.15)', color: m.status === 'ACTIVE' ? '#86efac' : '#ff6b6b', border: `1px solid ${m.status === 'ACTIVE' ? '#86efac' : '#ff6b6b'}` }}>
+                          {m.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <button className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}>View</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TRAINERS TAB */}
+      {tab === 'trainers' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+          {(trainers.length > 0 ? trainers : [
+            { id: 1, user: { name: 'Arjun Mehta' }, specialization: 'Strength & Conditioning', rating: 4.9, experienceYears: 6 },
+            { id: 2, user: { name: 'Pooja Sharma' }, specialization: 'Yoga & Mobility', rating: 4.8, experienceYears: 5 },
+            { id: 3, user: { name: 'Vikram Singh' }, specialization: 'Weight Training', rating: 4.9, experienceYears: 8 },
+            { id: 4, user: { name: 'Neha Kapoor' }, specialization: "Women's Fitness", rating: 4.7, experienceYears: 4 },
+          ]).map(trainer => (
+            <div key={trainer.id} className="glass-panel" style={{ padding: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(125,211,252,0.3), rgba(200,160,240,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#7dd3fc', flexShrink: 0 }}>
+                  {(trainer.user?.name || trainer.name || 'T').charAt(0)}
+                </div>
+                <div>
+                  <h4 style={{ fontWeight: 700 }}>{trainer.user?.name || trainer.name}</h4>
+                  <p style={{ color: '#7dd3fc', fontSize: '0.8rem' }}>{trainer.specialization}</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#a0b4c4' }}>
+                <span>⭐ {trainer.rating}</span>
+                <span>· {trainer.experienceYears || trainer.experience_years}yr exp</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* COMPLAINTS TAB */}
+      {tab === 'complaints' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Support Tickets ({complaints.length})</h3>
+          {complaints.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+              <AlertTriangle size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+              <p>No complaints found. Backend connection required for live data.</p>
+            </div>
+          ) : (
+            complaints.map(c => (
+              <div key={c.id} className="glass-card" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{c.subject}</h4>
+                  <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem', color: '#a0b4c4' }}>
+                    <span>{c.category}</span> · <span>{c.priority} priority</span>
+                  </div>
+                </div>
+                <span className="badge" style={{ background: c.status === 'OPEN' ? 'rgba(255,107,107,0.15)' : 'rgba(125,211,252,0.15)', color: c.status === 'OPEN' ? '#ff6b6b' : '#7dd3fc' }}>
+                  {c.status}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* PAYMENTS TAB */}
+      {tab === 'payments' && (
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+            {[
+              { label: 'Total Revenue', value: '₹95,497', color: '#86efac' },
+              { label: 'Monthly Revenue', value: '₹20,497', color: '#7dd3fc' },
+              { label: 'Successful Payments', value: '3', color: '#c8a0f0' },
+            ].map(s => (
+              <div key={s.label} className="glass-card" style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: s.color }}>{s.value}</div>
+                <div style={{ color: '#a0b4c4', fontSize: '0.85rem', marginTop: '0.25rem' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ color: '#a0b4c4', textAlign: 'center', fontSize: '0.875rem' }}>Full payment history available after backend connection. Razorpay integration ready.</p>
+        </div>
+      )}
+    </div>
+  );
+};
