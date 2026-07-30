@@ -30,6 +30,12 @@ export const apiClient = {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Token expired or invalid
+          this.setToken(null);
+          localStorage.removeItem('ironfit_user');
+          window.location.href = '/';
+        }
         throw new Error(data.message || 'API request failed');
       }
 

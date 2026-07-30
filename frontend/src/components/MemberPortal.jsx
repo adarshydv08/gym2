@@ -26,7 +26,10 @@ export const MemberPortal = ({ user }) => {
   const [complaints, setComplaints] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => {
+  const [allClasses, setAllClasses] = useState([]);
+  const [complaintForm, setComplaintForm] = useState({ subject: '', category: '', description: '' });
+
+  const loadData = async () => {
     const mid = user?.memberId;
     const uid = user?.userId;
     if (mid) {
@@ -35,11 +38,47 @@ export const MemberPortal = ({ user }) => {
       apiClient.get(`/payments/member/${mid}`).then(r => setPayments(r.data || [])).catch(() => {});
       apiClient.get(`/workouts/member/${mid}`).then(r => setWorkouts(r.data || [])).catch(() => {});
       apiClient.get(`/tickets/member/${mid}`).then(r => setComplaints(r.data || [])).catch(() => {});
+      apiClient.get(`/members/${mid}`).then(r => setMembership(r.data || null)).catch(() => {});
     }
     if (uid) {
       apiClient.get(`/notifications/user/${uid}`).then(r => setNotifications(r.data || [])).catch(() => {});
     }
+    apiClient.get('/classes').then(r => setAllClasses(r.data || [])).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
   }, [user]);
+
+  const handleComplaintSubmit = async (e) => {
+    e.preventDefault();
+    if (!complaintForm.subject || !complaintForm.category || !complaintForm.description) return;
+    try {
+      await apiClient.post('/tickets', {
+        memberId: user?.memberId,
+        subject: complaintForm.subject,
+        category: complaintForm.category,
+        description: complaintForm.description,
+        priority: 'MEDIUM'
+      });
+      setComplaintForm({ subject: '', category: '', description: '' });
+      loadData();
+      alert("Ticket raised successfully!");
+    } catch (err) {
+      alert("Failed to raise ticket: " + err.message);
+    }
+  };
+
+  const handleBookClass = async (classId) => {
+    if (!user?.memberId) return;
+    try {
+      await apiClient.post(`/classes/${classId}/book?memberId=${user.memberId}`, {});
+      loadData();
+      alert("Class booked successfully!");
+    } catch (err) {
+      alert("Failed to book class: " + err.message);
+    }
+  };
 
   const TABS = ['dashboard', 'membership', 'classes', 'attendance', 'workouts', 'payments', 'support'];
 
@@ -153,19 +192,50 @@ export const MemberPortal = ({ user }) => {
       {/* CLASSES */}
       {tab === 'classes' && (
         <div>
-          <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>My Booked Classes</h3>
-          <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
-            {DEMO_CLASSES.map((cls, i) => (
-              <div key={i} className="glass-panel" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{cls.title}</h4>
-                  <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', color: '#a0b4c4' }}>
-                    <span><Clock size={13} style={{ marginRight: '0.35rem' }} />{cls.day} · {cls.time}</span>
-                  </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+            {/* My Booked Classes */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>My Booked Classes</h3>
+              {bookings.length === 0 ? (
+                 <div style={{ textAlign: 'center', padding: '2rem', color: '#a0b4c4' }}><p>No bookings yet.</p></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {bookings.map((booking, i) => (
+                    <div key={i} className="glass-card" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h4 style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{booking.gymClass?.title || 'Class'}</h4>
+                        <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', color: '#a0b4c4' }}>
+                          <span><Clock size={13} style={{ marginRight: '0.35rem' }} />{booking.gymClass?.dayOfWeek} · {booking.gymClass?.startTime}</span>
+                        </div>
+                      </div>
+                      <span className="badge badge-member">{booking.status}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="badge badge-member">{cls.status}</span>
-              </div>
-            ))}
+              )}
+            </div>
+            
+            {/* Available Classes */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Available Classes</h3>
+              {allClasses.length === 0 ? (
+                 <div style={{ textAlign: 'center', padding: '2rem', color: '#a0b4c4' }}><p>No available classes.</p></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {allClasses.map((cls, i) => (
+                    <div key={i} className="glass-card" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h4 style={{ fontWeight: 700, marginBottom: '0.35rem' }}>{cls.title}</h4>
+                        <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', color: '#a0b4c4' }}>
+                          <span><Clock size={13} style={{ marginRight: '0.35rem' }} />{cls.dayOfWeek} · {cls.startTime}</span>
+                        </div>
+                      </div>
+                      <button className="btn-primary" style={{ padding: '0.4rem 0.75rem', fontSize: '0.75rem' }} onClick={() => handleBookClass(cls.id)}>Book</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -246,17 +316,17 @@ export const MemberPortal = ({ user }) => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
             <div className="glass-panel" style={{ padding: '2rem' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Raise a Complaint</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input className="glass-input" placeholder="Subject" />
-                <select className="glass-input" style={{ cursor: 'pointer' }}>
+              <form onSubmit={handleComplaintSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <input required className="glass-input" placeholder="Subject" value={complaintForm.subject} onChange={e => setComplaintForm({...complaintForm, subject: e.target.value})} />
+                <select required className="glass-input" style={{ cursor: 'pointer' }} value={complaintForm.category} onChange={e => setComplaintForm({...complaintForm, category: e.target.value})}>
                   <option value="">Category</option>
                   {['Equipment', 'Cleanliness', 'Trainer', 'Billing', 'Membership', 'General'].map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
-                <textarea className="glass-input" rows={4} placeholder="Describe your issue..." style={{ resize: 'vertical' }} />
-                <button className="btn-primary">Submit Ticket</button>
-              </div>
+                <textarea required className="glass-input" rows={4} placeholder="Describe your issue..." style={{ resize: 'vertical' }} value={complaintForm.description} onChange={e => setComplaintForm({...complaintForm, description: e.target.value})} />
+                <button type="submit" className="btn-primary">Submit Ticket</button>
+              </form>
             </div>
             <div className="glass-panel" style={{ padding: '2rem' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>My Tickets</h3>

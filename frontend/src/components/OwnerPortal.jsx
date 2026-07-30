@@ -27,6 +27,11 @@ export const OwnerPortal = ({ user }) => {
   const [tab, setTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
 
+  const [showAddTrainer, setShowAddTrainer] = useState(false);
+  const [trainerForm, setTrainerForm] = useState({ name: '', email: '', phone: '', specialization: '', experienceYears: '' });
+  const [showAddAnnouncement, setShowAddAnnouncement] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
+
   const load = async () => {
     setLoading(true);
     try {
@@ -44,6 +49,30 @@ export const OwnerPortal = ({ user }) => {
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
     } catch {}
     setLoading(false);
+  };
+
+  const handleAddTrainer = async (e) => {
+    e.preventDefault();
+    try {
+      await apiClient.post('/trainers', trainerForm);
+      setTrainerForm({ name: '', email: '', phone: '', specialization: '', experienceYears: '' });
+      setShowAddTrainer(false);
+      load();
+    } catch (err) {
+      alert("Failed to add trainer: " + err.message);
+    }
+  };
+
+  const handleAddAnnouncement = async (e) => {
+    e.preventDefault();
+    try {
+      await apiClient.post('/announcements', announcementForm);
+      setAnnouncementForm({ title: '', content: '' });
+      setShowAddAnnouncement(false);
+      load();
+    } catch (err) {
+      alert("Failed to add announcement: " + err.message);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -93,6 +122,9 @@ export const OwnerPortal = ({ user }) => {
             {t}
           </button>
         ))}
+        <button onClick={() => setTab('announcements')} className={tab === 'announcements' ? 'btn-primary' : 'btn-outline'} style={{ textTransform: 'capitalize', padding: '0.5rem 1.25rem' }}>
+          Announcements
+        </button>
       </div>
 
       {/* DASHBOARD TAB */}
@@ -208,30 +240,50 @@ export const OwnerPortal = ({ user }) => {
 
       {/* TRAINERS TAB */}
       {tab === 'trainers' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
-          {(trainers.length > 0 ? trainers : [
-            { id: 1, user: { name: 'Arjun Mehta' }, specialization: 'Strength & Conditioning', rating: 4.9, experienceYears: 6 },
-            { id: 2, user: { name: 'Pooja Sharma' }, specialization: 'Yoga & Mobility', rating: 4.8, experienceYears: 5 },
-            { id: 3, user: { name: 'Vikram Singh' }, specialization: 'Weight Training', rating: 4.9, experienceYears: 8 },
-            { id: 4, user: { name: 'Neha Kapoor' }, specialization: "Women's Fitness", rating: 4.7, experienceYears: 4 },
-          ]).map(trainer => (
-            <div key={trainer.id} className="glass-panel" style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(125,211,252,0.3), rgba(200,160,240,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#7dd3fc', flexShrink: 0 }}>
-                  {(trainer.user?.name || trainer.name || 'T').charAt(0)}
-                </div>
-                <div>
-                  <h4 style={{ fontWeight: 700 }}>{trainer.user?.name || trainer.name}</h4>
-                  <p style={{ color: '#7dd3fc', fontSize: '0.8rem' }}>{trainer.specialization}</p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#a0b4c4' }}>
-                <span>⭐ {trainer.rating}</span>
-                <span>· {trainer.experienceYears || trainer.experience_years}yr exp</span>
-              </div>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+            <button className="btn-primary" onClick={() => setShowAddTrainer(!showAddTrainer)}>
+              {showAddTrainer ? 'Cancel' : '+ Add New Trainer'}
+            </button>
+          </div>
+          {showAddTrainer && (
+            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Trainer Details</h3>
+              <form onSubmit={handleAddTrainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <input required className="glass-input" placeholder="Name" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.name} onChange={e => setTrainerForm({...trainerForm, name: e.target.value})} />
+                <input required className="glass-input" placeholder="Email" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.email} onChange={e => setTrainerForm({...trainerForm, email: e.target.value})} />
+                <input required className="glass-input" placeholder="Phone" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.phone} onChange={e => setTrainerForm({...trainerForm, phone: e.target.value})} />
+                <input required className="glass-input" placeholder="Specialization" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.specialization} onChange={e => setTrainerForm({...trainerForm, specialization: e.target.value})} />
+                <input required type="number" className="glass-input" placeholder="Years of Exp" style={{ flex: 1, minWidth: '150px' }} value={trainerForm.experienceYears} onChange={e => setTrainerForm({...trainerForm, experienceYears: e.target.value})} />
+                <button type="submit" className="btn-primary" style={{ minWidth: '150px' }}>Save Trainer</button>
+              </form>
             </div>
-          ))}
-        </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+            {(trainers.length > 0 ? trainers : [
+              { id: 1, user: { name: 'Arjun Mehta' }, specialization: 'Strength & Conditioning', rating: 4.9, experienceYears: 6 },
+              { id: 2, user: { name: 'Pooja Sharma' }, specialization: 'Yoga & Mobility', rating: 4.8, experienceYears: 5 },
+              { id: 3, user: { name: 'Vikram Singh' }, specialization: 'Weight Training', rating: 4.9, experienceYears: 8 },
+              { id: 4, user: { name: 'Neha Kapoor' }, specialization: "Women's Fitness", rating: 4.7, experienceYears: 4 },
+            ]).map(trainer => (
+              <div key={trainer.id} className="glass-panel" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'linear-gradient(135deg, rgba(125,211,252,0.3), rgba(200,160,240,0.3))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800, color: '#7dd3fc', flexShrink: 0 }}>
+                    {(trainer.user?.name || trainer.name || 'T').charAt(0)}
+                  </div>
+                  <div>
+                    <h4 style={{ fontWeight: 700 }}>{trainer.user?.name || trainer.name}</h4>
+                    <p style={{ color: '#7dd3fc', fontSize: '0.8rem' }}>{trainer.specialization}</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#a0b4c4' }}>
+                  <span>⭐ {trainer.rating || 5.0}</span>
+                  <span>· {trainer.experienceYears || trainer.experience_years}yr exp</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* COMPLAINTS TAB */}
@@ -278,6 +330,44 @@ export const OwnerPortal = ({ user }) => {
           </div>
           <p style={{ color: '#a0b4c4', textAlign: 'center', fontSize: '0.875rem' }}>Full payment history available after backend connection. Razorpay integration ready.</p>
         </div>
+      )}
+
+      {/* ANNOUNCEMENTS TAB */}
+      {tab === 'announcements' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+            <button className="btn-primary" onClick={() => setShowAddAnnouncement(!showAddAnnouncement)}>
+              {showAddAnnouncement ? 'Cancel' : '+ Add Announcement'}
+            </button>
+          </div>
+          {showAddAnnouncement && (
+            <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Announcement</h3>
+              <form onSubmit={handleAddAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <input required className="glass-input" placeholder="Announcement Title" value={announcementForm.title} onChange={e => setAnnouncementForm({...announcementForm, title: e.target.value})} />
+                <textarea required className="glass-input" rows={4} placeholder="Content..." style={{ resize: 'vertical' }} value={announcementForm.content} onChange={e => setAnnouncementForm({...announcementForm, content: e.target.value})} />
+                <button type="submit" className="btn-primary">Post Announcement</button>
+              </form>
+            </div>
+          )}
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {announcements.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+                <p>No announcements yet.</p>
+              </div>
+            ) : (
+              announcements.map(ann => (
+                <div key={ann.id} className="glass-panel" style={{ padding: '1.5rem' }}>
+                  <h4 style={{ fontWeight: 700, marginBottom: '0.5rem', color: '#c8a0f0' }}>{ann.title}</h4>
+                  <p style={{ fontSize: '0.9rem', color: '#e0e8f0' }}>{ann.content}</p>
+                  <div style={{ fontSize: '0.75rem', color: '#a0b4c4', marginTop: '1rem' }}>
+                    Posted on {new Date(ann.createdAt).toLocaleDateString('en-IN')}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );

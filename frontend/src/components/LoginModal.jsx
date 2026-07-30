@@ -41,8 +41,8 @@ export const LoginModal = ({ onClose }) => {
   const selectedRoleData = ROLES.find(r => r.id === selectedRole);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '2.5rem', position: 'relative', animation: 'fadeIn 0.3s ease' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '2.5rem', position: 'relative', animation: 'fadeIn 0.3s ease', margin: 'auto' }}>
         {/* Close */}
         <button onClick={onClose} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', color: '#a0b4c4', cursor: 'pointer' }}>
           <X size={20} />
@@ -64,28 +64,30 @@ export const LoginModal = ({ onClose }) => {
         </div>
 
         {/* Role Selector */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ fontSize: '0.8rem', color: '#a0b4c4', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '0.75rem' }}>
-            Sign in as
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-            {ROLES.map(role => {
-              const Icon = role.icon;
-              const active = selectedRole === role.id;
-              return (
-                <button key={role.id} onClick={() => setSelectedRole(role.id)} style={{ padding: '0.75rem 0.5rem', borderRadius: '10px', border: `1px solid ${active ? role.color : 'rgba(125,211,252,0.12)'}`, background: active ? `rgba(${role.color === '#c8a0f0' ? '200,160,240' : role.color === '#88b4cc' ? '136,180,204' : '125,211,252'},0.15)` : 'transparent', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-                  <Icon size={18} color={active ? role.color : '#a0b4c4'} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: active ? role.color : '#a0b4c4' }}>{role.label}</span>
-                </button>
-              );
-            })}
+        {mode === 'register' && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ fontSize: '0.8rem', color: '#a0b4c4', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '0.75rem' }}>
+              Sign in as
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+              {ROLES.map(role => {
+                const Icon = role.icon;
+                const active = selectedRole === role.id;
+                return (
+                  <button type="button" key={role.id} onClick={() => setSelectedRole(role.id)} style={{ padding: '0.75rem 0.5rem', borderRadius: '10px', border: `1px solid ${active ? role.color : 'rgba(125,211,252,0.12)'}`, background: active ? `rgba(${role.color === '#c8a0f0' ? '200,160,240' : role.color === '#88b4cc' ? '136,180,204' : '125,211,252'},0.15)` : 'transparent', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                    <Icon size={18} color={active ? role.color : '#a0b4c4'} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: active ? role.color : '#a0b4c4' }}>{role.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedRoleData && (
+              <p style={{ fontSize: '0.75rem', color: selectedRoleData.color, textAlign: 'center', marginTop: '0.5rem', opacity: 0.8 }}>
+                {selectedRoleData.desc}
+              </p>
+            )}
           </div>
-          {selectedRoleData && (
-            <p style={{ fontSize: '0.75rem', color: selectedRoleData.color, textAlign: 'center', marginTop: '0.5rem', opacity: 0.8 }}>
-              {selectedRoleData.desc}
-            </p>
-          )}
-        </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

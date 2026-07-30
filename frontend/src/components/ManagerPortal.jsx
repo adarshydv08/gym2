@@ -11,12 +11,25 @@ export const ManagerPortal = ({ user }) => {
   const [checkInId, setCheckInId] = useState('');
   const [checkInMsg, setCheckInMsg] = useState('');
 
-  useEffect(() => {
+  const loadData = () => {
     apiClient.get('/attendance/today').then(r => setAttendance(r.data || [])).catch(() => {});
     apiClient.get('/classes').then(r => setClasses(r.data || [])).catch(() => {});
     apiClient.get('/tickets').then(r => setComplaints(r.data || [])).catch(() => {});
     apiClient.get('/members').then(r => setMembers(r.data || [])).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleUpdateTicket = async (ticketId, status) => {
+    try {
+      await apiClient.put(`/tickets/${ticketId}/status?status=${status}`);
+      loadData();
+    } catch (err) {
+      alert("Failed to update ticket: " + err.message);
+    }
+  };
 
   const handleCheckIn = async () => {
     if (!checkInId) return;
@@ -143,7 +156,14 @@ export const ManagerPortal = ({ user }) => {
                 <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{c.subject}</div>
                 <div style={{ fontSize: '0.8rem', color: '#a0b4c4' }}>{c.category} · {c.priority}</div>
               </div>
-              <span className="badge" style={{ color: c.status === 'OPEN' ? '#ff6b6b' : '#7dd3fc' }}>{c.status}</span>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <span className="badge" style={{ color: c.status === 'OPEN' ? '#ff6b6b' : '#7dd3fc' }}>{c.status}</span>
+                {c.status === 'OPEN' && (
+                  <button className="btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }} onClick={() => handleUpdateTicket(c.id, 'CLOSED')}>
+                    Close
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
