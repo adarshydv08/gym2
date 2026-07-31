@@ -56,6 +56,9 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.post('/auth/register', formData);
       if (response.success && response.data) {
         const authData = response.data;
+        if (!authData.token) {
+          return { success: true, pending: true };
+        }
         apiClient.setToken(authData.token);
         localStorage.setItem('ironfit_user', JSON.stringify(authData));
         setUser(authData);

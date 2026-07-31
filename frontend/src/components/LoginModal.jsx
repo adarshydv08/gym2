@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { Dumbbell, X, User, Mail, Phone, Lock, Eye, EyeOff, Shield, Crown, Users } from 'lucide-react';
 
 const ROLES = [
-  { id: 'ROLE_OWNER', label: 'Owner', icon: Crown, color: '#c8a0f0', desc: 'Full administrative access' },
   { id: 'ROLE_MANAGER', label: 'Manager', icon: Shield, color: '#88b4cc', desc: 'Operations & staff access' },
   { id: 'ROLE_MEMBER', label: 'Member', icon: Users, color: '#7dd3fc', desc: 'Personal fitness portal' },
 ];
@@ -15,6 +14,7 @@ export const LoginModal = ({ onClose }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [form, setForm] = useState({ identifier: '', password: '', name: '', email: '', phone: '', confirmPassword: '' });
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,14 +22,20 @@ export const LoginModal = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(form.identifier, form.password, selectedRole);
+        await login(form.identifier, form.password, null);
         onClose();
       } else {
         if (form.password !== form.confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
-        await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role: selectedRole });
+        const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role: selectedRole });
+        if (res && res.pending) {
+            setSuccess('Registration successful! Your account is pending owner approval.');
+            setLoading(false);
+            return;
+        }
         onClose();
       }
     } catch (err) {
@@ -130,6 +136,12 @@ export const LoginModal = ({ onClose }) => {
             </div>
           )}
 
+          {success && (
+            <div style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px', padding: '0.75rem 1rem', color: '#4caf50', fontSize: '0.875rem' }}>
+              {success}
+            </div>
+          )}
+          
           {error && (
             <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: '8px', padding: '0.75rem 1rem', color: '#ff6b6b', fontSize: '0.875rem' }}>
               {error}

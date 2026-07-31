@@ -44,6 +44,10 @@ public class AuthService {
         User user = userRepository.findById(userPrincipal.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        if ("PENDING".equals(user.getStatus())) {
+            throw new RuntimeException("Your account is pending approval from the owner.");
+        }
+
         Set<String> roles = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(Collectors.toSet());
@@ -90,12 +94,18 @@ public class AuthService {
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new RuntimeException("Role " + roleName + " not found"));
 
+        String status = "ACTIVE";
+        if ("ROLE_MANAGER".equals(roleName)) {
+            status = "PENDING";
+        }
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(role))
+                .status(status)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -112,6 +122,17 @@ public class AuthService {
                     .build();
             Member savedMember = memberRepository.save(member);
             memberId = savedMember.getId();
+        }
+
+        if ("PENDING".equals(status)) {
+            return AuthResponse.builder()
+                    .userId(savedUser.getId())
+                    .name(savedUser.getName())
+                    .email(savedUser.getEmail())
+                    .phone(savedUser.getPhone())
+                    .roles(Set.of(roleName))
+                    .activeRole(roleName)
+                    .build();
         }
 
         // Generate token immediately
