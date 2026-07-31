@@ -13,4 +13,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
     @Query("SELECT SUM(p.amountInr) FROM Payment p WHERE p.paymentStatus = 'SUCCESSFUL'")
     BigDecimal calculateTotalRevenue();
+
+    @Query("SELECT SUM(p.amountInr) FROM Payment p WHERE p.paymentStatus = 'SUCCESSFUL' AND YEAR(p.paymentDate) = YEAR(CURRENT_DATE) AND MONTH(p.paymentDate) = MONTH(CURRENT_DATE)")
+    BigDecimal calculateMonthlyRevenue();
+
+    @Query("SELECT YEAR(p.paymentDate), MONTH(p.paymentDate), SUM(p.amountInr) FROM Payment p WHERE p.paymentStatus = 'SUCCESSFUL' AND p.paymentDate >= :startDate GROUP BY YEAR(p.paymentDate), MONTH(p.paymentDate) ORDER BY YEAR(p.paymentDate), MONTH(p.paymentDate)")
+    List<Object[]> getMonthlyRevenueTrend(@org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate);
+
+    @Query("SELECT mp.title, COUNT(ms) FROM Membership ms JOIN ms.plan mp GROUP BY mp.title ORDER BY COUNT(ms) DESC")
+    List<Object[]> getPlanDistribution();
 }

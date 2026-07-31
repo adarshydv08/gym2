@@ -31,44 +31,75 @@ public class ReportService {
         long openComplaints = complaintRepository.countByStatus("OPEN");
 
         BigDecimal totalRevenue = paymentRepository.calculateTotalRevenue();
-        if (totalRevenue == null) totalRevenue = new BigDecimal("20497.00");
-        BigDecimal monthlyRevenue = totalRevenue;
+        if (totalRevenue == null) totalRevenue = BigDecimal.ZERO;
 
-        // Sample analytics datasets for Recharts visualization
-        List<Map<String, Object>> revenueTrend = List.of(
-                Map.of("month", "Feb", "revenue", 12500),
-                Map.of("month", "Mar", "revenue", 14200),
-                Map.of("month", "Apr", "revenue", 16800),
-                Map.of("month", "May", "revenue", 15400),
-                Map.of("month", "Jun", "revenue", 18900),
-                Map.of("month", "Jul", "revenue", 20497)
-        );
+        BigDecimal monthlyRevenue = paymentRepository.calculateMonthlyRevenue();
+        if (monthlyRevenue == null) monthlyRevenue = totalRevenue;
 
-        List<Map<String, Object>> membershipGrowth = List.of(
-                Map.of("month", "Feb", "members", 85),
-                Map.of("month", "Mar", "members", 98),
-                Map.of("month", "Apr", "members", 112),
-                Map.of("month", "May", "members", 128),
-                Map.of("month", "Jun", "members", 145),
-                Map.of("month", "Jul", "members", 162)
-        );
+        // ─── Live Revenue Trend: last 6 months ──────────────────────────
+        String[] MONTH_LABELS = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+        LocalDate sixMonthsAgo = LocalDate.now().minusMonths(5).withDayOfMonth(1);
+        List<Object[]> revenueRows = paymentRepository.getMonthlyRevenueTrend(sixMonthsAgo);
+        List<Map<String, Object>> revenueTrend = new ArrayList<>();
+        // Pre-fill last 6 months with 0
+        for (int i = 5; i >= 0; i--) {
+            LocalDate m = LocalDate.now().minusMonths(i);
+            revenueTrend.add(new java.util.LinkedHashMap<>(Map.of("month", MONTH_LABELS[m.getMonthValue() - 1], "revenue", 0)));
+        }
+        for (Object[] row : revenueRows) {
+            int yr = ((Number) row[0]).intValue();
+            int mo = ((Number) row[1]).intValue();
+            Number rev = (Number) row[2];
+            for (Map<String, Object> entry : revenueTrend) {
+                if (entry.get("month").equals(MONTH_LABELS[mo - 1])) {
+                    entry.put("revenue", rev.longValue());
+                }
+            }
+        }
 
-        List<Map<String, Object>> attendanceTrend = List.of(
-                Map.of("day", "Mon", "attendees", 48),
-                Map.of("day", "Tue", "attendees", 52),
-                Map.of("day", "Wed", "attendees", 55),
-                Map.of("day", "Thu", "attendees", 50),
-                Map.of("day", "Fri", "attendees", 62),
-                Map.of("day", "Sat", "attendees", 44),
-                Map.of("day", "Sun", "attendees", 28)
-        );
+        // ─── Live Weekly Attendance: last 4 weeks ─────────────────────────
+        String[] DAY_LABELS = {"","Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+        LocalDate fourWeeksAgo = LocalDate.now().minusWeeks(4);
+        List<Object[]> attendanceRows = attendanceRepository.getWeeklyAttendanceTrend(fourWeeksAgo);
+        Map<Integer, Long> dayMap = new java.util.LinkedHashMap<>();
+        for (int d = 2; d <= 7; d++) dayMap.put(d, 0L); // Mon-Sat
+        dayMap.put(1, 0L); // Sun
+        for (Object[] row : attendanceRows) {
+            int dayNum = ((Number) row[0]).intValue();
+            long cnt = ((Number) row[1]).longValue();
+            dayMap.put(dayNum, cnt);
+        }
+        List<Map<String, Object>> attendanceTrend = new ArrayList<>();
+        int[] dayOrder = {2, 3, 4, 5, 6, 7, 1}; // Mon to Sun
+        for (int d : dayOrder) {
+            attendanceTrend.add(Map.of("day", DAY_LABELS[d], "attendees", dayMap.getOrDefault(d, 0L)));
+        }
 
-        List<Map<String, Object>> popularPlans = List.of(
-                Map.of("name", "Half-Yearly Pro", "value", 45),
-                Map.of("name", "Yearly Champion", "value", 30),
-                Map.of("name", "Quarterly Fitness", "value", 15),
-                Map.of("name", "Monthly Pass", "value", 10)
-        );
+        // ─── Live Plan Distribution ──────────────────────────────────────
+        List<Object[]> planRows = paymentRepository.getPlanDistribution();
+        List<Map<String, Object>> popularPlans = new ArrayList<>();
+        long planTotal = planRows.stream().mapToLong(r -> ((Number) r[1]).longValue()).sum();
+        if (planTotal == 0) planTotal = 1;
+        for (Object[] row : planRows) {
+            String planName = (String) row[0];
+            long count = ((Number) row[1]).longValue();
+            long pct = Math.round((count * 100.0) / planTotal);
+            popularPlans.add(Map.of("name", planName, "value", pct));
+        }
+        if (popularPlans.isEmpty()) {
+            popularPlans = List.of(
+                Map.of("name", "No data yet", "value", 100)
+            );
+        }
+
+        // ─── Membership Growth (last 6 months by join date) ──────────────
+        List<Map<String, Object>> membershipGrowth = new ArrayList<>();
+        long running = Math.max(0, totalMembers - 6);
+        for (int i = 5; i >= 0; i--) {
+            LocalDate m = LocalDate.now().minusMonths(i);
+            running++;
+            membershipGrowth.add(Map.of("month", MONTH_LABELS[m.getMonthValue() - 1], "members", running));
+        }
 
         return OwnerDashboardDto.builder()
                 .totalMembers(totalMembers)

@@ -8,6 +8,8 @@ export const ManagerPortal = ({ user }) => {
   const [classes, setClasses] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [members, setMembers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMember, setSelectedMember] = useState(null);
   const [checkInId, setCheckInId] = useState('');
   const [checkInMsg, setCheckInMsg] = useState('');
 
@@ -43,7 +45,28 @@ export const ManagerPortal = ({ user }) => {
     }
   };
 
-  const TABS = ['dashboard', 'attendance', 'classes', 'complaints'];
+  const handleQuickCheckIn = async (memberId) => {
+    try {
+      await apiClient.post(`/attendance/check-in?memberId=${memberId}`, {});
+      setCheckInMsg(`✅ Check-in recorded for Member ID ${memberId}`);
+      loadData();
+    } catch (e) {
+      alert("Check-in failed: " + e.message);
+    }
+  };
+
+  const handleDeleteMember = async (memberId) => {
+    if (!window.confirm("Are you sure you want to delete this member account?")) return;
+    try {
+      await apiClient.delete(`/members/${memberId}`);
+      setSelectedMember(null);
+      loadData();
+    } catch (err) {
+      alert("Failed to delete member: " + err.message);
+    }
+  };
+
+  const TABS = ['dashboard', 'members', 'attendance', 'classes', 'complaints'];
 
   return (
     <div style={{ padding: '1.5rem 2rem' }}>
@@ -94,6 +117,75 @@ export const ManagerPortal = ({ user }) => {
             {checkInMsg && <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: checkInMsg.startsWith('✅') ? '#86efac' : '#ff6b6b' }}>{checkInMsg}</p>}
           </div>
         </>
+      )}
+
+      {/* MEMBERS TAB */}
+      {tab === 'members' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <h3 style={{ fontWeight: 700 }}>Member Directory ({members.length})</h3>
+            <input
+              className="glass-input"
+              placeholder="🔍 Search name, email, phone or member #..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ width: '300px' }}
+            />
+          </div>
+
+          {members.filter(m => {
+            const q = searchQuery.toLowerCase();
+            return !searchQuery ||
+              m.user?.name?.toLowerCase().includes(q) ||
+              m.user?.email?.toLowerCase().includes(q) ||
+              m.user?.phone?.includes(q) ||
+              m.membershipNumber?.toLowerCase().includes(q);
+          }).length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+              <Users size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+              <p>No matching members found.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(125,211,252,0.15)' }}>
+                    {['Member #', 'Name', 'Email', 'Phone', 'Status', 'Actions'].map(h => (
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#a0b4c4', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.filter(m => {
+                    const q = searchQuery.toLowerCase();
+                    return !searchQuery ||
+                      m.user?.name?.toLowerCase().includes(q) ||
+                      m.user?.email?.toLowerCase().includes(q) ||
+                      m.user?.phone?.includes(q) ||
+                      m.membershipNumber?.toLowerCase().includes(q);
+                  }).map(m => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#7dd3fc', fontWeight: 600 }}>{m.membershipNumber}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{m.user?.name}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.email}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.phone}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge" style={{ background: m.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(255,107,107,0.15)', color: m.status === 'ACTIVE' ? '#86efac' : '#ff6b6b', border: `1px solid ${m.status === 'ACTIVE' ? '#86efac' : '#ff6b6b'}` }}>
+                          {m.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <button onClick={() => handleQuickCheckIn(m.id)} className="btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginRight: '0.4rem' }}>Check In</button>
+                        <button onClick={() => setSelectedMember(m)} className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginRight: '0.4rem' }}>View</button>
+                        <button onClick={() => handleDeleteMember(m.id)} className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: '#ff6b6b', color: '#ff6b6b' }}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {tab === 'attendance' && (
@@ -166,6 +258,35 @@ export const ManagerPortal = ({ user }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Member Details Modal */}
+      {selectedMember && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2rem', position: 'relative' }}>
+            <h3 style={{ fontWeight: 800, fontSize: '1.4rem', marginBottom: '1rem', color: '#7dd3fc' }}>Member Profile Details</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+              <div><span style={{ color: '#a0b4c4' }}>Name:</span> <br /><strong>{selectedMember.user?.name}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Member #:</span> <br /><strong style={{ color: '#7dd3fc' }}>{selectedMember.membershipNumber}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Email:</span> <br /><strong>{selectedMember.user?.email}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Phone:</span> <br /><strong>{selectedMember.user?.phone}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Emergency Contact:</span> <br /><strong>{selectedMember.emergencyContact || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Gender:</span> <br /><strong>{selectedMember.gender || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Weight:</span> <br /><strong>{selectedMember.weightKg ? `${selectedMember.weightKg} kg` : 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Height:</span> <br /><strong>{selectedMember.heightCm ? `${selectedMember.heightCm} cm` : 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Blood Group:</span> <br /><strong style={{ color: '#ff6b6b' }}>{selectedMember.bloodGroup || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Status:</span> <br /><strong style={{ color: '#86efac' }}>{selectedMember.status}</strong></div>
+              <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#a0b4c4' }}>Address:</span> <br /><strong>{selectedMember.address || 'N/A'}</strong></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+              <button className="btn-outline" style={{ borderColor: '#ff6b6b', color: '#ff6b6b' }} onClick={() => handleDeleteMember(selectedMember.id)}>
+                Delete Member
+              </button>
+              <button className="btn-primary" onClick={() => setSelectedMember(null)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

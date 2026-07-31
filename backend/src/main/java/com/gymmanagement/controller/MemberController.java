@@ -15,6 +15,7 @@ import java.util.List;
 public class MemberController {
 
     private final MemberService memberService;
+    private final com.gymmanagement.repository.UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
@@ -46,5 +47,12 @@ public class MemberController {
             @PathVariable Long userId,
             @RequestBody com.gymmanagement.dto.UpdateMemberProfileRequest request) {
         return ResponseEntity.ok(ApiResponse.success(memberService.updateMemberProfile(userId, request)));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> deleteMember(@PathVariable Long id) {
+        memberService.deleteMember(id, userRepository);
+        return ResponseEntity.ok(ApiResponse.success("Member deleted successfully", null));
     }
 }

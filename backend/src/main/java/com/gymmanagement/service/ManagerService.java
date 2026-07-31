@@ -16,8 +16,18 @@ public class ManagerService {
     private final ManagerRepository managerRepository;
     private final UserRepository userRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Manager> getAllManagers() {
+        List<User> managerUsers = userRepository.findByRoles_Name("ROLE_MANAGER");
+        for (User u : managerUsers) {
+            if (!managerRepository.existsByUserId(u.getId())) {
+                Manager m = Manager.builder()
+                        .user(u)
+                        .department("Operations & Member Services")
+                        .build();
+                managerRepository.save(m);
+            }
+        }
         return managerRepository.findAll();
     }
 

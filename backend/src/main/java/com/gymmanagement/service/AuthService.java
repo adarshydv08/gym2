@@ -127,6 +127,14 @@ public class AuthService {
             memberId = savedMember.getId();
         }
 
+        if ("ROLE_MANAGER".equals(roleName)) {
+            Manager manager = Manager.builder()
+                    .user(savedUser)
+                    .department("Operations & Member Services")
+                    .build();
+            managerRepository.save(manager);
+        }
+
         if ("PENDING".equals(status)) {
             return AuthResponse.builder()
                     .userId(savedUser.getId())

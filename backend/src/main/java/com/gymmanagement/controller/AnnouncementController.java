@@ -26,14 +26,18 @@ public class AnnouncementController {
     @PostMapping
     @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
     public ResponseEntity<ApiResponse<Announcement>> create(
-            @RequestParam String title,
-            @RequestParam String content,
-            @RequestParam(required = false, defaultValue = "ALL") String targetRole,
-            @RequestParam Long createdByUserId) {
-        var user = userRepository.findById(createdByUserId)
+            @RequestBody com.gymmanagement.dto.CreateAnnouncementRequest request) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        var principal = (com.gymmanagement.security.UserPrincipal) auth.getPrincipal();
+        var user = userRepository.findById(principal.getId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        
         Announcement a = Announcement.builder()
-                .title(title).content(content).targetRole(targetRole).createdByUser(user).build();
+                .title(request.getTitle())
+                .content(request.getContent())
+                .targetRole(request.getTargetRole() != null ? request.getTargetRole() : "ALL")
+                .createdByUser(user)
+                .build();
         return ResponseEntity.ok(ApiResponse.success("Announcement posted", announcementRepository.save(a)));
     }
 

@@ -47,4 +47,12 @@ public class MemberService {
         if (request.getEmergencyContact() != null) member.setEmergencyContact(request.getEmergencyContact());
         return memberRepository.save(member);
     }
+
+    @Transactional
+    public void deleteMember(Long id, com.gymmanagement.repository.UserRepository userRepository) {
+        Member member = getMemberById(id);
+        Long userId = member.getUser().getId();
+        memberRepository.delete(member);
+        userRepository.deleteById(userId);
+    }
 }

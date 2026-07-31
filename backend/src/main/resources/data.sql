@@ -2,6 +2,7 @@
 INSERT IGNORE INTO roles (id, name) VALUES (1, 'ROLE_OWNER');
 INSERT IGNORE INTO roles (id, name) VALUES (2, 'ROLE_MANAGER');
 INSERT IGNORE INTO roles (id, name) VALUES (3, 'ROLE_MEMBER');
+INSERT IGNORE INTO roles (id, name) VALUES (4, 'ROLE_TRAINER');
 
 -- BCrypt password for 'Password@123' is $2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6
 -- Users

@@ -25,6 +25,8 @@ export const OwnerPortal = ({ user }) => {
   const [managers, setManagers] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [selectedMember, setSelectedMember] = useState(null);
   const [tab, setTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
 
@@ -36,13 +38,14 @@ export const OwnerPortal = ({ user }) => {
   const load = async () => {
     setLoading(true);
     try {
-      const [m, mem, tr, comp, ann, man] = await Promise.allSettled([
+      const [m, mem, tr, comp, ann, man, pay] = await Promise.allSettled([
         apiClient.get('/reports/owner-dashboard'),
         apiClient.get('/members'),
         apiClient.get('/trainers'),
         apiClient.get('/tickets'),
         apiClient.get('/announcements'),
-        apiClient.get('/managers')
+        apiClient.get('/managers'),
+        apiClient.get('/payments')
       ]);
       if (m.status === 'fulfilled') setMetrics(m.value.data);
       if (mem.status === 'fulfilled') setMembers(mem.value.data || []);
@@ -50,6 +53,7 @@ export const OwnerPortal = ({ user }) => {
       if (comp.status === 'fulfilled') setComplaints(comp.value.data || []);
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
       if (man.status === 'fulfilled') setManagers(man.value.data || []);
+      if (pay.status === 'fulfilled') setPayments(pay.value.data || []);
     } catch { }
     setLoading(false);
   };
@@ -82,10 +86,22 @@ export const OwnerPortal = ({ user }) => {
 
   const handleApproveManager = async (managerId) => {
     try {
-      await apiClient.put(`/managers/${managerId}/approve`);
+      await apiClient.put(`/managers/${managerId}/approve`, {});
+      alert("🎉 Manager approved successfully!");
       load();
     } catch (err) {
       alert("Failed to approve manager: " + err.message);
+    }
+  };
+
+  const handleDeleteMember = async (memberId) => {
+    if (!window.confirm("Are you sure you want to delete this member account?")) return;
+    try {
+      await apiClient.delete(`/members/${memberId}`);
+      setSelectedMember(null);
+      load();
+    } catch (err) {
+      alert("Failed to delete member: " + err.message);
     }
   };
 
@@ -234,12 +250,12 @@ export const OwnerPortal = ({ user }) => {
                       <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.phone}</td>
                       <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#7dd3fc', fontWeight: 600 }}>{m.department}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className="badge" style={{ background: m.user?.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: m.user?.status === 'ACTIVE' ? '#86efac' : '#f59e0b', border: `1px solid ${m.user?.status === 'ACTIVE' ? '#86efac' : '#f59e0b'}` }}>
+                        <span className="badge" style={{ background: m.user?.status?.toUpperCase() === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: m.user?.status?.toUpperCase() === 'ACTIVE' ? '#86efac' : '#f59e0b', border: `1px solid ${m.user?.status?.toUpperCase() === 'ACTIVE' ? '#86efac' : '#f59e0b'}` }}>
                           {m.user?.status}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        {m.user?.status === 'PENDING' ? (
+                        {m.user?.status?.toUpperCase() === 'PENDING' ? (
                           <button onClick={() => handleApproveManager(m.id)} className="btn-primary" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}>Approve</button>
                         ) : (
                           <button className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} disabled>Approved</button>
@@ -286,7 +302,8 @@ export const OwnerPortal = ({ user }) => {
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        <button className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}>View</button>
+                        <button onClick={() => setSelectedMember(m)} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>View</button>
+                        <button onClick={() => handleDeleteMember(m.id)} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }}>Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -377,9 +394,9 @@ export const OwnerPortal = ({ user }) => {
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
             {[
-              { label: 'Total Revenue', value: '₹95,497', color: '#86efac' },
-              { label: 'Monthly Revenue', value: '₹20,497', color: '#7dd3fc' },
-              { label: 'Successful Payments', value: '3', color: '#c8a0f0' },
+              { label: 'Total Revenue', value: `₹${(data.totalRevenue || 0).toLocaleString('en-IN')}`, color: '#86efac' },
+              { label: 'Monthly Revenue', value: `₹${(data.monthlyRevenue || 0).toLocaleString('en-IN')}`, color: '#7dd3fc' },
+              { label: 'Successful Payments', value: payments.length, color: '#c8a0f0' },
             ].map(s => (
               <div key={s.label} className="glass-card" style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -387,7 +404,37 @@ export const OwnerPortal = ({ user }) => {
               </div>
             ))}
           </div>
-          <p style={{ color: '#a0b4c4', textAlign: 'center', fontSize: '0.875rem' }}>Full payment history available after backend connection. Razorpay integration ready.</p>
+
+          <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Live Transaction History</h4>
+          {payments.length === 0 ? (
+            <p style={{ color: '#a0b4c4', textAlign: 'center', padding: '2rem' }}>No payment records found.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(125,211,252,0.15)' }}>
+                    {['Txn ID', 'Member', 'Amount', 'Method', 'Status', 'Date'].map(h => (
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#a0b4c4', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map(p => (
+                    <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#c8a0f0', fontWeight: 600 }}>{p.transactionId}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{p.member?.user?.name || `Member #${p.member?.id}`}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#86efac' }}>₹{Number(p.amountInr || 0).toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{p.paymentMethod}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge" style={{ background: 'rgba(134,239,172,0.15)', color: '#86efac', border: '1px solid #86efac' }}>{p.paymentStatus}</span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN') : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -427,6 +474,35 @@ export const OwnerPortal = ({ user }) => {
             )}
           </div>
         </>
+      )}
+      {/* Member Details Modal */}
+      {selectedMember && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2rem', position: 'relative' }}>
+            <h3 style={{ fontWeight: 800, fontSize: '1.4rem', marginBottom: '1rem', color: '#7dd3fc' }}>Member Profile Details</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+              <div><span style={{ color: '#a0b4c4' }}>Name:</span> <br /><strong>{selectedMember.user?.name}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Member #:</span> <br /><strong style={{ color: '#7dd3fc' }}>{selectedMember.membershipNumber}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Email:</span> <br /><strong>{selectedMember.user?.email}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Phone:</span> <br /><strong>{selectedMember.user?.phone}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Emergency Contact:</span> <br /><strong>{selectedMember.emergencyContact || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Gender:</span> <br /><strong>{selectedMember.gender || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Weight:</span> <br /><strong>{selectedMember.weightKg ? `${selectedMember.weightKg} kg` : 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Height:</span> <br /><strong>{selectedMember.heightCm ? `${selectedMember.heightCm} cm` : 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Blood Group:</span> <br /><strong style={{ color: '#ff6b6b' }}>{selectedMember.bloodGroup || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Status:</span> <br /><strong style={{ color: '#86efac' }}>{selectedMember.status}</strong></div>
+              <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#a0b4c4' }}>Address:</span> <br /><strong>{selectedMember.address || 'N/A'}</strong></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+              <button className="btn-outline" style={{ borderColor: '#ff6b6b', color: '#ff6b6b' }} onClick={() => handleDeleteMember(selectedMember.id)}>
+                Delete Member
+              </button>
+              <button className="btn-primary" onClick={() => setSelectedMember(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
