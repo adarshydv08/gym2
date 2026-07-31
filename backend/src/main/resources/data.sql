@@ -5,17 +5,18 @@ INSERT IGNORE INTO roles (id, name) VALUES (3, 'ROLE_MEMBER');
 
 -- BCrypt password for 'Password@123' is $2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6
 -- Users
-INSERT IGNORE INTO users (id, name, email, phone, password, status) VALUES 
-(1, 'Aditya Sharma', 'owner@ironfit.in', '+91 98765 43210', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(2, 'Rahul Verma', 'rahul@ironfit.in', '+91 98765 43211', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(3, 'Priya Singh', 'priya@ironfit.in', '+91 98765 43212', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(4, 'Arjun Mehta', 'arjun@ironfit.in', '+91 98765 43213', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(5, 'Pooja Sharma', 'pooja@ironfit.in', '+91 98765 43214', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(6, 'Vikram Singh', 'vikram@ironfit.in', '+91 98765 43215', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(7, 'Neha Kapoor', 'neha@ironfit.in', '+91 98765 43216', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(8, 'Rohan Kumar', 'rohan@ironfit.in', '+91 98765 43217', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(9, 'Ananya Gupta', 'ananya@ironfit.in', '+91 98765 43218', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE'),
-(10, 'Neha Joshi', 'nehaj@ironfit.in', '+91 98765 43219', '$2a$10$8.UnVuG9HHgffUDAlk8qfOuVGkqRzgVym50CR73g005j81oJzU0i6', 'ACTIVE');
+INSERT INTO users (id, name, email, phone, password, status) VALUES 
+(1, 'Aditya Sharma', 'owner@ironfit.in', '+91 98765 43210', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(2, 'Rahul Verma', 'rahul@ironfit.in', '+91 98765 43211', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(3, 'Priya Singh', 'priya@ironfit.in', '+91 98765 43212', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(4, 'Arjun Mehta', 'arjun@ironfit.in', '+91 98765 43213', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(5, 'Pooja Sharma', 'pooja@ironfit.in', '+91 98765 43214', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(6, 'Vikram Singh', 'vikram@ironfit.in', '+91 98765 43215', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(7, 'Neha Kapoor', 'neha@ironfit.in', '+91 98765 43216', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(8, 'Rohan Kumar', 'rohan@ironfit.in', '+91 98765 43217', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(9, 'Ananya Gupta', 'ananya@ironfit.in', '+91 98765 43218', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE'),
+(10, 'Neha Joshi', 'nehaj@ironfit.in', '+91 98765 43219', '$2a$10$xCuVfWRZb6Up7lNP9qmq3uDcwP5B9OvlPNpkGls2iy0Eny6ASH8uG', 'ACTIVE')
+ON DUPLICATE KEY UPDATE password = VALUES(password);
 
 -- User Roles
 INSERT IGNORE INTO user_roles (user_id, role_id) VALUES 
