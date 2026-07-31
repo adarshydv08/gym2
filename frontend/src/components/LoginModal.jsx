@@ -141,24 +141,7 @@ export const LoginModal = ({ onClose }) => {
           </button>
         </form>
 
-        {/* Demo Credentials */}
-        {mode === 'login' && (
-          <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(125,211,252,0.05)', borderRadius: '10px', border: '1px solid rgba(125,211,252,0.1)' }}>
-            <p style={{ fontSize: '0.75rem', color: '#a0b4c4', textAlign: 'center', marginBottom: '0.5rem', fontWeight: 600 }}>DEMO CREDENTIALS</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              {[
-                { role: 'Owner', email: 'owner@ironfit.in', pass: 'Password@123', color: '#c8a0f0' },
-                { role: 'Manager', email: 'rahul@ironfit.in', pass: 'Password@123', color: '#88b4cc' },
-                { role: 'Member', email: 'rohan@ironfit.in', pass: 'Password@123', color: '#7dd3fc' },
-              ].map(d => (
-                <div key={d.role} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
-                  <span style={{ color: d.color, fontWeight: 600 }}>{d.role}:</span>
-                  <span style={{ color: '#a0b4c4' }}>{d.email} / {d.pass}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Switch Mode */}
         <p style={{ textAlign: 'center', marginTop: '1.25rem', color: '#a0b4c4', fontSize: '0.875rem' }}>

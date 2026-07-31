@@ -47,7 +47,7 @@ export const OwnerPortal = ({ user }) => {
       if (tr.status === 'fulfilled') setTrainers(tr.value.data || []);
       if (comp.status === 'fulfilled') setComplaints(comp.value.data || []);
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
-    } catch {}
+    } catch { }
     setLoading(false);
   };
 
@@ -250,11 +250,11 @@ export const OwnerPortal = ({ user }) => {
             <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Trainer Details</h3>
               <form onSubmit={handleAddTrainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <input required className="glass-input" placeholder="Name" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.name} onChange={e => setTrainerForm({...trainerForm, name: e.target.value})} />
-                <input required className="glass-input" placeholder="Email" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.email} onChange={e => setTrainerForm({...trainerForm, email: e.target.value})} />
-                <input required className="glass-input" placeholder="Phone" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.phone} onChange={e => setTrainerForm({...trainerForm, phone: e.target.value})} />
-                <input required className="glass-input" placeholder="Specialization" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.specialization} onChange={e => setTrainerForm({...trainerForm, specialization: e.target.value})} />
-                <input required type="number" className="glass-input" placeholder="Years of Exp" style={{ flex: 1, minWidth: '150px' }} value={trainerForm.experienceYears} onChange={e => setTrainerForm({...trainerForm, experienceYears: e.target.value})} />
+                <input required className="glass-input" placeholder="Name" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.name} onChange={e => setTrainerForm({ ...trainerForm, name: e.target.value })} />
+                <input required className="glass-input" placeholder="Email" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.email} onChange={e => setTrainerForm({ ...trainerForm, email: e.target.value })} />
+                <input required className="glass-input" placeholder="Phone" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.phone} onChange={e => setTrainerForm({ ...trainerForm, phone: e.target.value })} />
+                <input required className="glass-input" placeholder="Specialization" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.specialization} onChange={e => setTrainerForm({ ...trainerForm, specialization: e.target.value })} />
+                <input required type="number" className="glass-input" placeholder="Years of Exp" style={{ flex: 1, minWidth: '150px' }} value={trainerForm.experienceYears} onChange={e => setTrainerForm({ ...trainerForm, experienceYears: e.target.value })} />
                 <button type="submit" className="btn-primary" style={{ minWidth: '150px' }}>Save Trainer</button>
               </form>
             </div>
@@ -344,8 +344,8 @@ export const OwnerPortal = ({ user }) => {
             <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Announcement</h3>
               <form onSubmit={handleAddAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input required className="glass-input" placeholder="Announcement Title" value={announcementForm.title} onChange={e => setAnnouncementForm({...announcementForm, title: e.target.value})} />
-                <textarea required className="glass-input" rows={4} placeholder="Content..." style={{ resize: 'vertical' }} value={announcementForm.content} onChange={e => setAnnouncementForm({...announcementForm, content: e.target.value})} />
+                <input required className="glass-input" placeholder="Announcement Title" value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} />
+                <textarea required className="glass-input" rows={4} placeholder="Content..." style={{ resize: 'vertical' }} value={announcementForm.content} onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })} />
                 <button type="submit" className="btn-primary">Post Announcement</button>
               </form>
             </div>
