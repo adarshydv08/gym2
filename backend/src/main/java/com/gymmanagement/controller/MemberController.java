@@ -39,4 +39,12 @@ public class MemberController {
     public ResponseEntity<ApiResponse<Member>> updateMemberStatus(@PathVariable Long id, @RequestParam String status) {
         return ResponseEntity.ok(ApiResponse.success(memberService.updateMemberStatus(id, status)));
     }
+
+    @PutMapping("/user/{userId}/profile")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'MEMBER')")
+    public ResponseEntity<ApiResponse<Member>> updateMemberProfile(
+            @PathVariable Long userId,
+            @RequestBody com.gymmanagement.dto.UpdateMemberProfileRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(memberService.updateMemberProfile(userId, request)));
+    }
 }

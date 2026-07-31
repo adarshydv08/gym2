@@ -17,8 +17,10 @@ export const MemberPortal = ({ user }) => {
   const [notifications, setNotifications] = useState([]);
   const [allClasses, setAllClasses] = useState([]);
   const [availablePlans, setAvailablePlans] = useState([]);
+  const [profile, setProfile] = useState(null);
 
   // UI state
+  const [profileForm, setProfileForm] = useState({ weightKg: '', heightCm: '', bloodGroup: '', address: '', emergencyContact: '' });
   const [complaintForm, setComplaintForm] = useState({ subject: '', category: '', description: '' });
   const [purchaseModal, setPurchaseModal] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
@@ -36,6 +38,15 @@ export const MemberPortal = ({ user }) => {
     if (mid) {
       // Load member data in parallel
       promises.push(
+        apiClient.get(`/members/${mid}`)
+          .then(r => {
+            const data = r.data || null;
+            if (data) {
+              setProfile(data);
+              setProfileForm({ weightKg: data.weightKg || '', heightCm: data.heightCm || '', bloodGroup: data.bloodGroup || '', address: data.address || '', emergencyContact: data.emergencyContact || '' });
+            }
+          })
+          .catch(() => {}),
         apiClient.get(`/memberships/member/${mid}/active`)
           .then(r => setMembership(r.data || null))
           .catch(() => setMembership(null)),
@@ -136,6 +147,18 @@ export const MemberPortal = ({ user }) => {
     setPurchasing(false);
   };
 
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!user?.userId) return;
+    try {
+      await apiClient.put(`/members/user/${user.userId}/profile`, profileForm);
+      alert("Profile updated successfully!");
+      loadData();
+    } catch (err) {
+      alert("Failed to update profile: " + err.message);
+    }
+  };
+
   // ─── Computed values ──────────────────────────────────────────────────────
   const membershipStatus = membership?.status || null;
   const membershipPlanName = membership?.plan?.title || null;
@@ -148,7 +171,7 @@ export const MemberPortal = ({ user }) => {
     ? (user?.memberId ? `IF-2026-${String(user.memberId).padStart(3, '0')}` : 'IF-2026-NEW')
     : null;
 
-  const TABS = ['dashboard', 'membership', 'classes', 'attendance', 'workouts', 'payments', 'support'];
+  const TABS = ['dashboard', 'profile', 'membership', 'classes', 'attendance', 'workouts', 'payments', 'support'];
 
   // ─── No Membership CTA ────────────────────────────────────────────────────
   const NoMembershipCard = () => (
@@ -674,6 +697,40 @@ export const MemberPortal = ({ user }) => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {/* ── PROFILE ────────────────────────────────────────────────────── */}
+      {tab === 'profile' && (
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+          <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>My Profile Details</h3>
+          <form onSubmit={handleUpdateProfile} style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a0b4c4', marginBottom: '0.5rem' }}>Body Weight (kg)</label>
+              <input type="number" step="0.1" className="glass-input" value={profileForm.weightKg} onChange={e => setProfileForm({ ...profileForm, weightKg: e.target.value })} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a0b4c4', marginBottom: '0.5rem' }}>Height (cm)</label>
+              <input type="number" step="0.1" className="glass-input" value={profileForm.heightCm} onChange={e => setProfileForm({ ...profileForm, heightCm: e.target.value })} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a0b4c4', marginBottom: '0.5rem' }}>Blood Group</label>
+              <select className="glass-input" value={profileForm.bloodGroup} onChange={e => setProfileForm({ ...profileForm, bloodGroup: e.target.value })}>
+                <option value="">Select Blood Group</option>
+                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a0b4c4', marginBottom: '0.5rem' }}>Emergency Contact</label>
+              <input type="text" className="glass-input" value={profileForm.emergencyContact} onChange={e => setProfileForm({ ...profileForm, emergencyContact: e.target.value })} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a0b4c4', marginBottom: '0.5rem' }}>Address</label>
+              <input type="text" className="glass-input" value={profileForm.address} onChange={e => setProfileForm({ ...profileForm, address: e.target.value })} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <button type="submit" className="btn-primary" style={{ padding: '0.875rem 2rem' }}>Update Profile</button>
+            </div>
+          </form>
         </div>
       )}
     </div>

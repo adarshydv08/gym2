@@ -36,4 +36,15 @@ public class MemberService {
         member.setStatus(status);
         return memberRepository.save(member);
     }
+
+    @Transactional
+    public Member updateMemberProfile(Long userId, com.gymmanagement.dto.UpdateMemberProfileRequest request) {
+        Member member = getMemberByUserId(userId);
+        if (request.getWeightKg() != null) member.setWeightKg(request.getWeightKg());
+        if (request.getHeightCm() != null) member.setHeightCm(request.getHeightCm());
+        if (request.getBloodGroup() != null) member.setBloodGroup(request.getBloodGroup());
+        if (request.getAddress() != null) member.setAddress(request.getAddress());
+        if (request.getEmergencyContact() != null) member.setEmergencyContact(request.getEmergencyContact());
+        return memberRepository.save(member);
+    }
 }

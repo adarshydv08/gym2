@@ -15,7 +15,7 @@ export const LoginModal = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({ identifier: '', password: '', name: '', email: '', phone: '', confirmPassword: '' });
+  const [form, setForm] = useState({ identifier: '', password: '', name: '', email: '', phone: '', confirmPassword: '', weightKg: '', heightCm: '', bloodGroup: '' });
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -30,7 +30,7 @@ export const LoginModal = ({ onClose }) => {
         onClose();
       } else {
         if (form.password !== form.confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
-        const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role: selectedRole });
+        const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role: selectedRole, weightKg: form.weightKg || null, heightCm: form.heightCm || null, bloodGroup: form.bloodGroup || null });
         if (res && res.pending) {
             setSuccess('Registration successful! Your account is pending owner approval.');
             setLoading(false);
@@ -111,6 +111,16 @@ export const LoginModal = ({ onClose }) => {
                 <Phone size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#a0b4c4' }} />
                 <input className="glass-input" name="phone" placeholder="+91 Mobile Number" value={form.phone} onChange={handleChange} required style={{ paddingLeft: '2.75rem' }} />
               </div>
+              {selectedRole === 'ROLE_MEMBER' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                  <input className="glass-input" name="weightKg" type="number" placeholder="Weight (kg)" value={form.weightKg} onChange={handleChange} />
+                  <input className="glass-input" name="heightCm" type="number" placeholder="Height (cm)" value={form.heightCm} onChange={handleChange} />
+                  <select className="glass-input" name="bloodGroup" value={form.bloodGroup} onChange={handleChange} style={{ color: form.bloodGroup ? '#fff' : '#a0b4c4' }}>
+                    <option value="" disabled>Blood Grp</option>
+                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                  </select>
+                </div>
+              )}
             </>
           )}
 

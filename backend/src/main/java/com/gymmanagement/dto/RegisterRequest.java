@@ -29,4 +29,7 @@ public class RegisterRequest {
     private String emergencyContact;
     private String address;
     private String gender;
+    private Double weightKg;
+    private Double heightCm;
+    private String bloodGroup;
 }

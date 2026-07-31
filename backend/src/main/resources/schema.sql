@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS members (
     gender VARCHAR(20),
     date_of_birth DATE,
     address VARCHAR(255),
+    weight_kg DECIMAL(5, 2),
+    height_cm DECIMAL(5, 2),
+    blood_group VARCHAR(5),
     status VARCHAR(20) DEFAULT 'ACTIVE',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

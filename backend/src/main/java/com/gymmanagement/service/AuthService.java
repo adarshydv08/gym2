@@ -119,6 +119,9 @@ public class AuthService {
                     .emergencyContact(request.getEmergencyContact())
                     .gender(request.getGender())
                     .address(request.getAddress())
+                    .weightKg(request.getWeightKg())
+                    .heightCm(request.getHeightCm())
+                    .bloodGroup(request.getBloodGroup())
                     .build();
             Member savedMember = memberRepository.save(member);
             memberId = savedMember.getId();

@@ -22,6 +22,7 @@ export const OwnerPortal = ({ user }) => {
   const [metrics, setMetrics] = useState(null);
   const [members, setMembers] = useState([]);
   const [trainers, setTrainers] = useState([]);
+  const [managers, setManagers] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [tab, setTab] = useState('dashboard');
@@ -35,18 +36,20 @@ export const OwnerPortal = ({ user }) => {
   const load = async () => {
     setLoading(true);
     try {
-      const [m, mem, tr, comp, ann] = await Promise.allSettled([
+      const [m, mem, tr, comp, ann, man] = await Promise.allSettled([
         apiClient.get('/reports/owner-dashboard'),
         apiClient.get('/members'),
         apiClient.get('/trainers'),
         apiClient.get('/tickets'),
         apiClient.get('/announcements'),
+        apiClient.get('/managers')
       ]);
       if (m.status === 'fulfilled') setMetrics(m.value.data);
       if (mem.status === 'fulfilled') setMembers(mem.value.data || []);
       if (tr.status === 'fulfilled') setTrainers(tr.value.data || []);
       if (comp.status === 'fulfilled') setComplaints(comp.value.data || []);
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
+      if (man.status === 'fulfilled') setManagers(man.value.data || []);
     } catch { }
     setLoading(false);
   };
@@ -77,7 +80,16 @@ export const OwnerPortal = ({ user }) => {
 
   useEffect(() => { load(); }, []);
 
-  const TABS = ['dashboard', 'members', 'trainers', 'complaints', 'payments'];
+  const handleApproveManager = async (managerId) => {
+    try {
+      await apiClient.put(`/managers/${managerId}/approve`);
+      load();
+    } catch (err) {
+      alert("Failed to approve manager: " + err.message);
+    }
+  };
+
+  const TABS = ['dashboard', 'managers', 'members', 'trainers', 'complaints', 'payments'];
 
   // Fallback demo data
   const data = metrics || {
@@ -193,6 +205,53 @@ export const OwnerPortal = ({ user }) => {
             </ResponsiveContainer>
           </div>
         </>
+      )}
+
+      {/* MANAGERS TAB */}
+      {tab === 'managers' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Managers ({managers.length})</h3>
+          {managers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+              <UserCheck size={48} style={{ margin: '0 auto 1rem', opacity: 0.3 }} />
+              <p>No managers found.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(125,211,252,0.15)' }}>
+                    {['Name', 'Email', 'Phone', 'Department', 'Status', 'Actions'].map(h => (
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#a0b4c4', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {managers.map(m => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{m.user?.name}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.email}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{m.user?.phone}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#7dd3fc', fontWeight: 600 }}>{m.department}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge" style={{ background: m.user?.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: m.user?.status === 'ACTIVE' ? '#86efac' : '#f59e0b', border: `1px solid ${m.user?.status === 'ACTIVE' ? '#86efac' : '#f59e0b'}` }}>
+                          {m.user?.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        {m.user?.status === 'PENDING' ? (
+                          <button onClick={() => handleApproveManager(m.id)} className="btn-primary" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}>Approve</button>
+                        ) : (
+                          <button className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }} disabled>Approved</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
 
       {/* MEMBERS TAB */}

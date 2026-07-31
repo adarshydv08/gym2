@@ -37,6 +37,15 @@ public class Member {
     @Column(length = 255)
     private String address;
 
+    @Column(name = "weight_kg")
+    private Double weightKg;
+
+    @Column(name = "height_cm")
+    private Double heightCm;
+
+    @Column(name = "blood_group", length = 5)
+    private String bloodGroup;
+
     @Builder.Default
     @Column(length = 20)
     private String status = "ACTIVE";
