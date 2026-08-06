@@ -46,6 +46,7 @@ public class MemberService {
         if (request.getBloodGroup() != null) member.setBloodGroup(request.getBloodGroup());
         if (request.getAddress() != null) member.setAddress(request.getAddress());
         if (request.getEmergencyContact() != null) member.setEmergencyContact(request.getEmergencyContact());
+        if (request.getFitnessGoal() != null) member.setFitnessGoal(request.getFitnessGoal());
         return memberRepository.save(member);
     }
 

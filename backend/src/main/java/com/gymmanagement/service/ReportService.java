@@ -39,7 +39,7 @@ public class ReportService {
         // ─── Live Revenue Trend: last 6 months ──────────────────────────
         String[] MONTH_LABELS = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
         LocalDate sixMonthsAgo = LocalDate.now().minusMonths(5).withDayOfMonth(1);
-        List<Object[]> revenueRows = paymentRepository.getMonthlyRevenueTrend(sixMonthsAgo);
+        List<Object[]> revenueRows = paymentRepository.getMonthlyRevenueTrend(sixMonthsAgo.atStartOfDay());
         List<Map<String, Object>> revenueTrend = new ArrayList<>();
         // Pre-fill last 6 months with 0
         for (int i = 5; i >= 0; i--) {
@@ -93,12 +93,25 @@ public class ReportService {
         }
 
         // ─── Membership Growth (last 6 months by join date) ──────────────
-        List<Map<String, Object>> membershipGrowth = new ArrayList<>();
-        long running = Math.max(0, totalMembers - 6);
+        LocalDate memberGrowthStart = LocalDate.now().minusMonths(5).withDayOfMonth(1);
+        List<Object[]> growthRows = memberRepository.getMonthlyMemberGrowth(memberGrowthStart.atStartOfDay());
+        Map<String, Long> growthMap = new LinkedHashMap<>();
         for (int i = 5; i >= 0; i--) {
-            LocalDate m = LocalDate.now().minusMonths(i);
-            running++;
-            membershipGrowth.add(Map.of("month", MONTH_LABELS[m.getMonthValue() - 1], "members", running));
+            LocalDate month = LocalDate.now().minusMonths(i);
+            growthMap.put(MONTH_LABELS[month.getMonthValue() - 1], 0L);
+        }
+        for (Object[] row : growthRows) {
+            int year = ((Number) row[0]).intValue();
+            int month = ((Number) row[1]).intValue();
+            long count = ((Number) row[2]).longValue();
+            String monthLabel = MONTH_LABELS[month - 1];
+            if (growthMap.containsKey(monthLabel)) {
+                growthMap.put(monthLabel, count);
+            }
+        }
+        List<Map<String, Object>> membershipGrowth = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : growthMap.entrySet()) {
+            membershipGrowth.add(Map.of("month", entry.getKey(), "members", entry.getValue()));
         }
 
         return OwnerDashboardDto.builder()

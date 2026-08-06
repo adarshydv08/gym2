@@ -50,4 +50,11 @@ public class ComplaintService {
         complaint.setStatus(status);
         return complaintRepository.save(complaint);
     }
+
+    @Transactional
+    public void deleteComplaint(Long complaintId) {
+        Complaint complaint = complaintRepository.findById(complaintId)
+                .orElseThrow(() -> new RuntimeException("Complaint not found with id: " + complaintId));
+        complaintRepository.delete(complaint);
+    }
 }

@@ -134,6 +134,31 @@ body {
 .badge-manager { background: rgba(136, 180, 204, 0.2); color: #88b4cc; border: 1px solid #88b4cc; }
 .badge-member { background: rgba(125, 211, 252, 0.2); color: #7dd3fc; border: 1px solid #7dd3fc; }
 
+.alert {
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.alert-success {
+  background: rgba(76, 175, 80, 0.14);
+  border: 1px solid rgba(76, 175, 80, 0.32);
+  color: #8ee18f;
+}
+
+.alert-error {
+  background: rgba(255, 107, 107, 0.14);
+  border: 1px solid rgba(255, 107, 107, 0.32);
+  color: #ff9a9a;
+}
+
+.icon-accent {
+  color: #7dd3fc;
+  filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.25));
+  stroke-width: 2.2;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

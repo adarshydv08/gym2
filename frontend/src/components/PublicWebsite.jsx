@@ -114,7 +114,7 @@ export const PublicWebsite = ({ onOpenAuth }) => {
             </div>
             <div style={{ background: '#0f172a', borderRadius: '18px', padding: '1.5rem', color: '#e2e8f0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                <Zap size={20} color="#7dd3fc" />
+                <Zap size={20} className="icon-accent" />
                 <span style={{ fontWeight: 700 }}>Fast response guaranteed</span>
               </div>
               <p style={{ color: '#a0b4c4' }}>Your request is sent directly to our owner and manager team for immediate follow-up.</p>
@@ -134,8 +134,8 @@ export const PublicWebsite = ({ onOpenAuth }) => {
               <input className="glass-input" type="time" value={appointmentForm.preferredTime} onChange={e => setAppointmentForm({ ...appointmentForm, preferredTime: e.target.value })} />
             </div>
             <textarea className="glass-input" rows={4} placeholder="Tell us what you'd like to achieve" value={appointmentForm.message} onChange={e => setAppointmentForm({ ...appointmentForm, message: e.target.value })} />
-            {appointmentStatus && <div className="alert success">{appointmentStatus}</div>}
-            {appointmentError && <div className="alert error">{appointmentError}</div>}
+            {appointmentStatus && <div className="alert alert-success" role="status">{appointmentStatus}</div>}
+            {appointmentError && <div className="alert alert-error" role="alert">{appointmentError}</div>}
             <button type="submit" className="btn-primary" style={{ width: 'fit-content' }}>Send Request</button>
           </form>
         </div>
@@ -245,17 +245,17 @@ export const PublicWebsite = ({ onOpenAuth }) => {
       <section style={{ padding: '4rem 0 6rem' }}>
         <div className="glass-panel" style={{ padding: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem', textAlign: 'center' }}>
           <div>
-            <MapPin size={28} color="#7dd3fc" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+            <MapPin size={28} className="icon-accent" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
             <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Location</h4>
             <p style={{ color: '#a0b4c4', fontSize: '0.9rem' }}>Civil Lines, Roorkee<br />Uttarakhand - 247667</p>
           </div>
           <div>
-            <Clock size={28} color="#7dd3fc" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+            <Clock size={28} className="icon-accent" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
             <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Hours</h4>
             <p style={{ color: '#a0b4c4', fontSize: '0.9rem' }}>Mon–Sat: 5:00 AM – 10:00 PM<br />Sunday: 6:00 AM – 1:00 PM</p>
           </div>
           <div>
-            <Phone size={28} color="#7dd3fc" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
+            <Phone size={28} className="icon-accent" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
             <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Contact</h4>
             <p style={{ color: '#a0b4c4', fontSize: '0.9rem' }}>+91 98765 43210<br />support@ironfit.in</p>
           </div>

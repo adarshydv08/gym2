@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 import { Activity, Clock, Dumbbell, Users, ClipboardList, RefreshCw, Plus, Trash2, Edit3 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export const TrainerPortal = ({ user }) => {
   const [tab, setTab] = useState('dashboard');
@@ -14,6 +15,7 @@ export const TrainerPortal = ({ user }) => {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackRating, setFeedbackRating] = useState(5);
   const [newPlan, setNewPlan] = useState({ memberId: '', title: '', goal: '', notes: '' });
+  const [editingWorkout, setEditingWorkout] = useState(null);
   const [creating, setCreating] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -46,28 +48,36 @@ export const TrainerPortal = ({ user }) => {
   };
 
   useEffect(() => { loadData(); }, [user]);
+  const { showToast } = useToast();
 
-  const handleCreateWorkout = async (e) => {
+  const handleSaveWorkout = async (e) => {
     e.preventDefault();
     if (!newPlan.memberId || !newPlan.title) {
-      setErrorMsg('Member ID and title are required.');
+      setErrorMsg('Member and title are required.');
       return;
     }
     setCreating(true);
     setErrorMsg('');
     try {
-      await apiClient.post('/workouts', {
+      const payload = {
         memberId: Number(newPlan.memberId),
         trainerId: user.trainerId,
         title: newPlan.title,
         goal: newPlan.goal,
         notes: newPlan.notes
-      });
-      setSuccessMsg('Workout plan created successfully.');
+      };
+      if (editingWorkout) {
+        await apiClient.put(`/workouts/${editingWorkout.id}`, payload);
+        showToast('Workout plan updated successfully.', { type: 'success' });
+      } else {
+        await apiClient.post('/workouts', payload);
+        showToast('Workout plan created successfully.', { type: 'success' });
+      }
       setNewPlan({ memberId: '', title: '', goal: '', notes: '' });
+      setEditingWorkout(null);
       loadData();
     } catch (err) {
-      setErrorMsg(err.message || 'Unable to create workout plan.');
+      showToast(err.message || 'Unable to save workout plan.', { type: 'error' });
     }
     setCreating(false);
   };
@@ -77,9 +87,9 @@ export const TrainerPortal = ({ user }) => {
     try {
       await apiClient.delete(`/workouts/${id}`);
       loadData();
-      setSuccessMsg('Workout plan deleted.');
+      showToast('Workout plan deleted.', { type: 'success' });
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to delete workout plan.');
+      showToast(err.message || 'Failed to delete workout plan.', { type: 'error' });
     }
   };
 
@@ -115,7 +125,7 @@ export const TrainerPortal = ({ user }) => {
               { icon: Activity, label: 'Next Session', value: classes[0]?.dayOfWeek ? `${classes[0].dayOfWeek} ${classes[0].startTime}` : 'TBD', color: '#f9a8d4' },
             ].map(card => (
               <div key={card.label} className="glass-panel" style={{ padding: '1.5rem' }}>
-                <card.icon size={24} color={card.color} style={{ marginBottom: '0.75rem' }} />
+                <card.icon size={24} color="#ffffff" style={{ marginBottom: '0.75rem' }} />
                 <div style={{ fontSize: '2rem', fontWeight: 800, color: card.color }}>{card.value}</div>
                 <div style={{ color: '#a0b4c4', fontSize: '0.85rem', marginTop: '0.25rem' }}>{card.label}</div>
               </div>
@@ -126,12 +136,17 @@ export const TrainerPortal = ({ user }) => {
               <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>Assigned Members</h3>
               <div style={{ display: 'grid', gap: '0.75rem' }}>
                 {members.slice(0, 4).map(member => (
-                  <div key={member.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem' }}>
+                  <div key={member.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem', gap: '1rem', flexWrap: 'wrap' }}>
                     <div>
                       <div style={{ fontWeight: 700 }}>{member.user?.name || `Member #${member.id}`}</div>
                       <div style={{ color: '#a0b4c4', fontSize: '0.85rem' }}>{member.membershipNumber || 'No membership #'} · {member.status}</div>
                     </div>
-                    <div style={{ textAlign: 'right', color: '#7dd3fc', fontWeight: 600 }}>{member.assignedTrainer?.user?.name ? member.assignedTrainer.user.name : 'Assigned'}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <button className="btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={() => { setFeedbackMemberId(member.id); setShowFeedbackModal(true); }}>
+                        Give Feedback
+                      </button>
+                      <div style={{ textAlign: 'right', color: '#7dd3fc', fontWeight: 600 }}>{member.assignedTrainer?.user?.name ? member.assignedTrainer.user.name : 'Assigned'}</div>
+                    </div>
                   </div>
                 ))}
                 {members.length > 4 && (
@@ -181,8 +196,13 @@ export const TrainerPortal = ({ user }) => {
                   <Plus size={16} />
                 </div>
               </div>
-              {successMsg && <div className="alert success" style={{ marginBottom: '1rem' }}>{successMsg}</div>}
-              {errorMsg && <div className="alert error" style={{ marginBottom: '1rem' }}>{errorMsg}</div>}
+              {successMsg && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{successMsg}</div>}
+              {errorMsg && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{errorMsg}</div>}
+              {editingWorkout && (
+                <div style={{ marginBottom: '1rem', color: '#a0b4c4', fontSize: '0.9rem' }}>
+                  Editing workout plan for {editingWorkout.member?.user?.name || `Member #${editingWorkout.member?.id}`}. <button onClick={() => { setEditingWorkout(null); setNewPlan({ memberId: '', title: '', goal: '', notes: '' }); setSuccessMsg(''); setErrorMsg(''); }} style={{ background: 'none', border: 'none', color: '#7dd3fc', cursor: 'pointer', textDecoration: 'underline' }}>Cancel edit</button>
+                </div>
+              )}
               {workouts.length === 0 ? (
                 <p style={{ color: '#a0b4c4' }}>No workout plans created yet. Use the form to assign a new plan.</p>
               ) : (
@@ -229,7 +249,7 @@ export const TrainerPortal = ({ user }) => {
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Workout Plan</h3>
-            <form onSubmit={handleCreateWorkout} style={{ display: 'grid', gap: '1rem' }}>
+            <form onSubmit={handleSaveWorkout} style={{ display: 'grid', gap: '1rem' }}>
               <label>
                 Member
                 {members.length > 0 ? (
@@ -256,7 +276,7 @@ export const TrainerPortal = ({ user }) => {
                 <textarea className="glass-input" value={newPlan.notes} onChange={e => setNewPlan({ ...newPlan, notes: e.target.value })} placeholder="Additional guidance or plan details" rows={4} />
               </label>
               <button type="submit" className="btn-primary" disabled={creating}>
-                {creating ? 'Creating...' : 'Create Workout'}
+                {creating ? (editingWorkout ? 'Saving...' : 'Saving...') : (editingWorkout ? 'Update Workout' : 'Create Workout')}
               </button>
             </form>
           </div>
@@ -281,26 +301,13 @@ export const TrainerPortal = ({ user }) => {
                     setShowFeedbackModal(false);
                     setFeedbackMessage(''); setFeedbackRating(5); setFeedbackMemberId('');
                     if (user?.trainerId) apiClient.get(`/trainers/${user.trainerId}/feedbacks`).then(r => setFeedbacks(r.data || [])).catch(() => {});
-                  } catch (err) { alert('Failed to save feedback: ' + err.message); }
+                  } catch (err) { showToast('Failed to save feedback: ' + (err.message || err), { type: 'error' }); }
                 }}>Save</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* feedback list */}
-        {feedbacks.length > 0 && (
-          <div style={{ marginTop: '1rem' }}>
-            <h4 style={{ marginBottom: '0.5rem' }}>Recent Feedbacks</h4>
-            {feedbacks.map(f => (
-              <div key={f.id} className="glass-card" style={{ padding: '0.75rem', marginBottom: '0.5rem' }}>
-                <div style={{ fontWeight: 700 }}>{f.member?.user?.name || `#${f.member?.id}`} · <span style={{ fontWeight: 600, color: '#7dd3fc' }}>{f.rating || '-'}/5</span></div>
-                <div style={{ color: '#a0b4c4', marginTop: '0.35rem' }}>{f.message}</div>
-                <div style={{ color: '#a0b4c4', fontSize: '0.8rem', marginTop: '0.35rem' }}>{new Date(f.createdAt).toLocaleString()}</div>
-              </div>
-            ))}
-          </div>
-        )}
     </div>
   );
 };

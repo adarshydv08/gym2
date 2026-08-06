@@ -65,6 +65,16 @@ npm run build
 npx serve dist
 ```
 
+Client-ready reset and demo data
+- The backend `data.sql` file has been updated to clear existing seeded/demo tables before inserting only the approved demo accounts.
+- Approved seeded accounts:
+  - `owner@ironfit.in`
+  - `manager1@ironfit.in`
+  - `trainer1@ironfit.in`
+  - `tinku@ironfit.in`
+- To present the site to a client without previous production/demo data, reset the MySQL database and re-run the application so `data.sql` can reseed cleanly.
+- The owner dashboard revenue, attendance, plan distribution, and membership growth charts now reflect real database data.
+
 Environment variables (examples)
 - `DB_URL` / `spring.datasource.url` — JDBC URL (e.g., jdbc:mysql://localhost:3306/ironfit_db)
 - `DB_USERNAME` / `spring.datasource.username`
@@ -84,20 +94,22 @@ API summary (selected endpoints)
 - GET `/api/workouts` — workout-related CRUD endpoints under `/api/workouts`
 - GET `/api/membership-plans` — membership plans
 - GET `/api/classes` — class schedule
+- PUT `/api/settings` — OWNER: update landing page gym details and contact info
+- PUT `/api/membership-plans/{id}` — OWNER: update membership pricing, visibility, and plan metadata
+- GET `/api/users` — OWNER: view all registered website users
 - Other admin endpoints: `/api/members`, `/api/payments`, `/api/tickets`, `/api/announcements`
 
 Features implemented (high level)
 - Role-based authentication & authorization (JWT + Spring Security)
 - Public landing page with appointment booking form
-- Owner/Manager portal: metrics, member/trainer management, appointment requests review
+- Owner/Manager portal: metrics, member/trainer management, appointment requests review, owner-only landing page settings, membership pricing updates, and website user directory
 - Trainer portal: create/delete workout plans, manage assigned classes
 - Workout plan CRUD and persistence
 - Appointment request entity + notification creation on create
 - React frontend using Vite; structured components and `apiClient` wrapper
 
 Troubleshooting & common commands
-- If backend fails to start: confirm `JAVA_HOME` points to a compatible JDK
-- To re-run DB schema/data (for dev): `backend/src/main/resources/schema.sql` and `data.sql` are executed by the app if configured — check `application.yml`
+- If backend fails to start: confirm `JAVA_HOME` points to a compatible JDK- To reset stale data and reseed a clean client-ready dataset: drop the existing database, recreate it, then restart the backend so `backend/src/main/resources/data.sql` runs fresh.- To re-run DB schema/data (for dev): `backend/src/main/resources/schema.sql` and `data.sql` are executed by the app if configured — check `application.yml`
 - To run backend with verbose logs: `.\mvnw.cmd -Dspring-boot.run.profiles=dev spring-boot:run`
 
 Notes about ports and CORS

@@ -40,4 +40,11 @@ public class ComplaintController {
     public ResponseEntity<ApiResponse<Complaint>> updateStatus(@PathVariable Long id, @RequestParam String status) {
         return ResponseEntity.ok(ApiResponse.success(complaintService.updateComplaintStatus(id, status)));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> deleteComplaint(@PathVariable Long id) {
+        complaintService.deleteComplaint(id);
+        return ResponseEntity.ok(ApiResponse.success("Complaint deleted successfully", null));
+    }
 }

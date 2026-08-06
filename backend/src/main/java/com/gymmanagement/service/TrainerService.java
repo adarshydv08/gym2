@@ -40,7 +40,7 @@ public class TrainerService {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode("Password@123"))
-                .status("ACTIVE")
+                .status(com.gymmanagement.entity.UserStatus.ACTIVE)
                 .roles(java.util.Set.of(role))
                 .build();
         var savedUser = userRepository.save(user);

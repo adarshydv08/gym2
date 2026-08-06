@@ -16,6 +16,8 @@ export const AuthProvider = ({ children }) => {
           if (response.success && response.data) {
             setUser(response.data);
             localStorage.setItem('ironfit_user', JSON.stringify(response.data));
+            // ensure token remains persisted
+            localStorage.setItem('ironfit_token', token);
           } else {
             throw new Error('Invalid session');
           }
@@ -31,18 +33,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (identifier, password, selectedRole) => {
+  const login = async (identifier, password) => {
     try {
       const response = await apiClient.post('/auth/login', {
         identifier,
         password,
-        selectedRole,
       });
 
       if (response.success && response.data) {
         const authData = response.data;
         apiClient.setToken(authData.token);
         localStorage.setItem('ironfit_user', JSON.stringify(authData));
+        if (authData.token) {
+          localStorage.setItem('ironfit_token', authData.token);
+        }
         setUser(authData);
         return { success: true, user: authData };
       }
@@ -61,6 +65,9 @@ export const AuthProvider = ({ children }) => {
         }
         apiClient.setToken(authData.token);
         localStorage.setItem('ironfit_user', JSON.stringify(authData));
+        if (authData.token) {
+          localStorage.setItem('ironfit_token', authData.token);
+        }
         setUser(authData);
         return { success: true, user: authData };
       }

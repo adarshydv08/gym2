@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider, ToastContainer } from './context/ToastContext';
+import NotificationCenter from './components/NotificationCenter';
 import { Navbar } from './components/Navbar';
 import { LoginModal } from './components/LoginModal';
 import { PublicWebsite } from './components/PublicWebsite';
@@ -7,12 +9,14 @@ import { OwnerPortal } from './components/OwnerPortal';
 import { ManagerPortal } from './components/ManagerPortal';
 import { TrainerPortal } from './components/TrainerPortal';
 import { MemberPortal } from './components/MemberPortal';
+import ApprovalDashboard from './components/ApprovalDashboard';
 import './index.css';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [activeTab, setActiveTab] = useState('public');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   if (loading) {
     return (
@@ -42,6 +46,7 @@ const AppContent = () => {
           if (tab === 'portal' && !user) { setShowAuth(true); return; }
           setActiveTab(tab);
         }}
+        onToggleNotifications={() => setShowNotifications(v => !v)}
       />
 
       <main>
@@ -58,6 +63,10 @@ const AppContent = () => {
         )}
 
         {activeTab === 'public' && <PublicWebsite onOpenAuth={() => setShowAuth(true)} />}
+        {activeTab === 'approvals' && user && (user.activeRole === 'ROLE_OWNER' || user.activeRole === 'ROLE_MANAGER') && (
+          <ApprovalDashboard />
+        )}
+
         {activeTab === 'portal' && user && renderPortal()}
         {activeTab === 'portal' && !user && (
           <div style={{ textAlign: 'center', padding: '6rem 2rem', color: '#a0b4c4' }}>
@@ -68,6 +77,8 @@ const AppContent = () => {
       </main>
 
       {showAuth && <LoginModal onClose={() => { setShowAuth(false); if (user) setActiveTab('portal'); }} />}
+      <ToastContainer />
+      {showNotifications && <NotificationCenter onClose={() => setShowNotifications(false)} />}
 
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
@@ -78,9 +89,11 @@ const AppContent = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import { useToast } from '../context/ToastContext';
 import { CreditCard, Activity, Calendar, Dumbbell, Bell, Ticket, IndianRupee, CheckCircle, Clock, Star, ShoppingCart, AlertCircle, X, ChevronRight } from 'lucide-react';
 
 // ─── No DEMO data. Everything comes from the real API. ───────────────────────
@@ -100,6 +101,7 @@ export const MemberPortal = ({ user }) => {
   };
 
   useEffect(() => { loadData(); }, [user]);
+  const { showToast } = useToast();
 
   // ─── Handlers ────────────────────────────────────────────────────────────
   const handleComplaintSubmit = async (e) => {
@@ -115,9 +117,9 @@ export const MemberPortal = ({ user }) => {
       });
       setComplaintForm({ subject: '', category: '', description: '' });
       loadData();
-      alert('Ticket raised successfully!');
+      showToast('Ticket raised successfully!', { type: 'success' });
     } catch (err) {
-      alert('Failed to raise ticket: ' + err.message);
+      showToast('Failed to raise ticket: ' + (err.message || err), { type: 'error' });
     }
   };
 
@@ -131,9 +133,9 @@ export const MemberPortal = ({ user }) => {
     try {
       await apiClient.post(`/classes/${classId}/book?memberId=${user.memberId}`, {});
       loadData();
-      alert('Class booked successfully!');
+      showToast('Class booked successfully!', { type: 'success' });
     } catch (err) {
-      alert('Failed to book class: ' + err.message);
+      showToast('Failed to book class: ' + (err.message || err), { type: 'error' });
     }
   };
 
@@ -148,9 +150,9 @@ export const MemberPortal = ({ user }) => {
       setPurchaseModal(false);
       setSelectedPlan(null);
       loadData();
-      alert(`🎉 Membership purchased! Welcome to ${selectedPlan.title}!`);
+      showToast(`🎉 Membership purchased! Welcome to ${selectedPlan.title}!`, { type: 'success' });
     } catch (err) {
-      alert('Purchase failed: ' + err.message);
+      showToast('Purchase failed: ' + (err.message || err), { type: 'error' });
     }
     setPurchasing(false);
   };
@@ -160,10 +162,10 @@ export const MemberPortal = ({ user }) => {
     if (!user?.userId) return;
     try {
       await apiClient.put(`/members/user/${user.userId}/profile`, profileForm);
-      alert("Profile updated successfully!");
+      showToast('Profile updated successfully!', { type: 'success' });
       loadData();
     } catch (err) {
-      alert("Failed to update profile: " + err.message);
+      showToast('Failed to update profile: ' + (err.message || err), { type: 'error' });
     }
   };
 
@@ -385,6 +387,55 @@ export const MemberPortal = ({ user }) => {
             </div>
           )}
 
+          {/* My Trainer / Feedback / Workout */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            <div className="glass-panel" style={{ padding: '1rem' }}>
+              <h4 style={{ margin: 0, fontWeight: 800 }}>My Trainer</h4>
+              <div style={{ marginTop: '0.5rem', color: '#a0b4c4' }}>
+                {profile?.assignedTrainer?.user?.name ? (
+                  <>
+                    <div style={{ fontWeight: 700 }}>{profile.assignedTrainer.user.name}</div>
+                    <div style={{ fontSize: '0.9rem', color: '#7dd3fc' }}>{profile.assignedTrainer.specialization || 'Trainer'}</div>
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>{profile.assignedTrainer.bio || ''}</div>
+                  </>
+                ) : (
+                  <div style={{ color: '#a0b4c4' }}>You do not have a trainer assigned yet.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1rem' }}>
+              <h4 style={{ margin: 0, fontWeight: 800 }}>My Feedback</h4>
+              <div style={{ marginTop: '0.75rem' }}>
+                {trainerFeedbacks.length === 0 && managerFeedbacks.length === 0 ? (
+                  <div style={{ color: '#a0b4c4' }}>No feedback yet. Your trainer and manager will share notes here.</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {trainerFeedbacks.map(f => (
+                      <div key={f.id} style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.4rem' }}>
+                          <span style={{ fontWeight: 700 }}>{f.trainer?.user?.name || 'Trainer'}</span>
+                          <span style={{ color: '#7dd3fc', fontSize: '0.85rem' }}>{f.rating ? `${f.rating}/5` : 'No rating'}</span>
+                        </div>
+                        <div style={{ color: '#a0b4c4', fontSize: '0.9rem' }}>{f.message}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#7dd3fc', marginTop: '0.5rem' }}>{new Date(f.createdAt).toLocaleDateString()}</div>
+                      </div>
+                    ))}
+                    {managerFeedbacks.map(f => (
+                      <div key={`m-${f.id}`} style={{ padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.4rem' }}>
+                          <span style={{ fontWeight: 700 }}>Manager</span>
+                          <span style={{ color: '#7dd3fc', fontSize: '0.85rem' }}>{new Date(f.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div style={{ color: '#a0b4c4', fontSize: '0.9rem' }}>{f.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Quick Stats Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
             {[
@@ -405,42 +456,12 @@ export const MemberPortal = ({ user }) => {
                 onClick={card.action}
                 style={{ padding: '1.25rem', textAlign: 'left', cursor: 'pointer', background: 'none', border: '1px solid rgba(125,211,252,0.12)', borderRadius: '16px', transition: 'all 0.2s' }}
               >
-                <card.icon size={22} color={card.color} style={{ marginBottom: '0.75rem' }} />
+                <card.icon size={22} color="#ffffff" style={{ marginBottom: '0.75rem' }} />
                 <div style={{ fontSize: '1.4rem', fontWeight: 800, color: card.color }}>{card.value}</div>
                 <div style={{ fontSize: '0.8rem', color: '#a0b4c4', marginTop: '0.25rem' }}>{card.label}</div>
               </button>
             ))}
           </div>
-          {latestWorkout && (
-            <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
-              <h4 style={{ margin: 0, fontWeight: 700 }}>Latest Workout Plan</h4>
-              <div style={{ color: '#a0b4c4', marginTop: '0.5rem' }}>{latestWorkout.title} · {latestWorkout.goal}</div>
-              <div style={{ marginTop: '0.75rem', fontSize: '0.9rem' }}>{latestWorkout.notes || 'No notes provided.'}</div>
-              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {(latestWorkout.exercises || []).slice(0,3).map(ex => (
-                  <div key={ex.id} className="badge" style={{ background: 'rgba(125,211,252,0.06)', border: '1px solid rgba(125,211,252,0.08)', color: '#e0f2fe' }}>{ex.exerciseName} · {ex.sets}x{ex.reps}</div>
-                ))}
-                { (latestWorkout.exercises || []).length > 3 && <div style={{ color: '#a0b4c4' }}>+{(latestWorkout.exercises || []).length - 3} more</div> }
-              </div>
-            </div>
-          )}
-          {(trainerFeedbacks.length > 0 || managerFeedbacks.length > 0) && (
-            <div className="glass-panel" style={{ padding: '1rem', marginTop: '1rem' }}>
-              <h4 style={{ margin: 0, fontWeight: 800 }}>Feedback</h4>
-              {trainerFeedbacks.map(f => (
-                <div key={f.id} style={{ marginTop: '0.5rem' }}>
-                  <div style={{ fontWeight: 700 }}>{f.trainer?.user?.name || 'Trainer' } · <span style={{ color: '#7dd3fc' }}>{f.rating || '-'/5}</span></div>
-                  <div style={{ color: '#a0b4c4' }}>{f.message}</div>
-                </div>
-              ))}
-              {managerFeedbacks.map(f => (
-                <div key={f.id} style={{ marginTop: '0.5rem' }}>
-                  <div style={{ fontWeight: 700 }}>Manager · <span style={{ color: '#7dd3fc' }}>{new Date(f.createdAt).toLocaleDateString()}</span></div>
-                  <div style={{ color: '#a0b4c4' }}>{f.message}</div>
-                </div>
-              ))}
-            </div>
-          )}
         </>
       )}
 

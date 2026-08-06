@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, IndianRupee, Activity, Dumbbell, AlertTriangle, TrendingUp, UserCheck, Calendar, ChevronRight, RefreshCw } from 'lucide-react';
+import { Users, IndianRupee, Activity, Dumbbell, AlertTriangle, TrendingUp, UserCheck, Calendar, ChevronRight, RefreshCw, Settings } from 'lucide-react';
 
 const GLASS_COLORS = ['#7dd3fc', '#c8a0f0', '#88b4cc', '#f9a8d4', '#86efac'];
 
@@ -26,11 +26,15 @@ export const OwnerPortal = ({ user }) => {
   const [complaints, setComplaints] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [tab, setTab] = useState('dashboard');
   const [appointmentFilter, setAppointmentFilter] = useState('ALL');
   const [showReplyModal, setShowReplyModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [actionLoading, setActionLoading] = useState(false);
   const [replyAppointmentId, setReplyAppointmentId] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -43,10 +47,17 @@ export const OwnerPortal = ({ user }) => {
   const [assignMemberId, setAssignMemberId] = useState(null);
   const [assignTrainerId, setAssignTrainerId] = useState(null);
 
+  const [settings, setSettings] = useState({});
+  const [settingsForm, setSettingsForm] = useState({ gymName: '', logoUrl: '', address: '', phone: '', email: '', openingHours: '', holidays: '', upiId: '' });
+  const [users, setUsers] = useState([]);
+  const [membershipPlans, setMembershipPlans] = useState([]);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [planUpdateLoading, setPlanUpdateLoading] = useState(false);
+
   const load = async () => {
     setLoading(true);
     try {
-      const [m, mem, tr, comp, app, ann, man, pay] = await Promise.allSettled([
+      const [m, mem, tr, comp, app, ann, man, pay, approvals, settingsResp, usersResp, plansResp] = await Promise.allSettled([
         apiClient.get('/reports/owner-dashboard'),
         apiClient.get('/members'),
         apiClient.get('/trainers'),
@@ -54,7 +65,11 @@ export const OwnerPortal = ({ user }) => {
         apiClient.get('/appointments'),
         apiClient.get('/announcements'),
         apiClient.get('/managers'),
-        apiClient.get('/payments')
+        apiClient.get('/payments'),
+        apiClient.get('/managers/pending-approvals'),
+        apiClient.get('/settings'),
+        apiClient.get('/users'),
+        apiClient.get('/membership-plans')
       ]);
       if (m.status === 'fulfilled') setMetrics(m.value.data);
       if (mem.status === 'fulfilled') setMembers(mem.value.data || []);
@@ -64,6 +79,23 @@ export const OwnerPortal = ({ user }) => {
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
       if (man.status === 'fulfilled') setManagers(man.value.data || []);
       if (pay.status === 'fulfilled') setPayments(pay.value.data || []);
+      if (approvals.status === 'fulfilled') setPendingApprovals(approvals.value.data || []);
+      if (settingsResp.status === 'fulfilled') {
+        const payload = settingsResp.value.data || {};
+        setSettings(payload);
+        setSettingsForm({
+          gymName: payload.gymName || '',
+          logoUrl: payload.logoUrl || '',
+          address: payload.address || '',
+          phone: payload.phone || '',
+          email: payload.email || '',
+          openingHours: payload.openingHours || '',
+          holidays: payload.holidays || '',
+          upiId: payload.upiId || ''
+        });
+      }
+      if (usersResp.status === 'fulfilled') setUsers(usersResp.value.data || []);
+      if (plansResp.status === 'fulfilled') setMembershipPlans(plansResp.value.data || []);
     } catch (err) {
       console.warn('Owner portal load failed', err.message || err);
     }
@@ -94,6 +126,46 @@ export const OwnerPortal = ({ user }) => {
     }
   };
 
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await apiClient.put('/settings', settingsForm);
+      showToast('Landing page settings updated successfully.', 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to save site settings: ' + err.message, 'error');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleMembershipPlanChange = (planId, field, value) => {
+    setMembershipPlans(prev => prev.map(plan => plan.id === planId ? { ...plan, [field]: value } : plan));
+  };
+
+  const handleSavePlan = async (planId) => {
+    const plan = membershipPlans.find(p => p.id === planId);
+    if (!plan) return;
+    setPlanUpdateLoading(true);
+    try {
+      await apiClient.put(`/membership-plans/${planId}`, {
+        title: plan.title,
+        description: plan.description || '',
+        durationMonths: Number(plan.durationMonths || 0),
+        priceInr: Number(plan.priceInr || 0),
+        benefits: plan.benefits || '',
+        isPopular: Boolean(plan.isPopular),
+        isActive: Boolean(plan.isActive)
+      });
+      showToast(`Membership plan '${plan.title}' updated successfully.`, 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to save membership plan: ' + err.message, 'error');
+    } finally {
+      setPlanUpdateLoading(false);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
   const handleApproveManager = async (managerId) => {
@@ -103,6 +175,40 @@ export const OwnerPortal = ({ user }) => {
       load();
     } catch (err) {
       alert("Failed to approve manager: " + err.message);
+    }
+  };
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    window.setTimeout(() => setToastMessage(''), 5000);
+  };
+
+  const handleApproveUser = async (userId) => {
+    setActionLoading(true);
+    try {
+      await apiClient.put(`/managers/users/${userId}/approve`, {});
+      setPendingApprovals(prev => prev.map(item => item.userId === userId ? { ...item, status: 'ACTIVE' } : item));
+      showToast('Request approved successfully.', 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to approve request: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectUser = async (userId) => {
+    setActionLoading(true);
+    try {
+      await apiClient.put(`/managers/users/${userId}/reject`, {});
+      setPendingApprovals(prev => prev.map(item => item.userId === userId ? { ...item, status: 'REJECTED' } : item));
+      showToast('Request rejected successfully.', 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to reject request: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -155,7 +261,7 @@ export const OwnerPortal = ({ user }) => {
     }
   };
 
-  const TABS = ['dashboard', 'managers', 'members', 'trainers', 'appointments', 'complaints', 'payments'];
+  const TABS = ['dashboard', 'users', 'members', 'trainers', 'appointments', 'complaints', 'payments', 'settings'];
 
   // Fallback demo data
   const data = metrics || {
@@ -197,6 +303,11 @@ export const OwnerPortal = ({ user }) => {
           <RefreshCw size={16} /> Refresh
         </button>
       </div>
+      {toastMessage && (
+        <div className={`alert alert-${toastType}`} style={{ marginBottom: '1rem' }}>
+          {toastMessage}
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
@@ -221,6 +332,34 @@ export const OwnerPortal = ({ user }) => {
             <MetricCard icon={Dumbbell} label="Active Trainers" value={data.activeTrainers} sub="On duty" color="#88b4cc" />
             <MetricCard icon={Calendar} label="Today's Classes" value={data.todayClasses} sub="Scheduled" color="#f9a8d4" />
             <MetricCard icon={AlertTriangle} label="Open Tickets" value={data.openComplaints} sub="Awaiting response" color="#f59e0b" />
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontWeight: 700 }}>Pending Approval Queue</h3>
+              <span className="badge" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid #f59e0b' }}>{pendingApprovals.length} waiting</span>
+            </div>
+            {pendingApprovals.length === 0 ? (
+              <p style={{ color: '#a0b4c4' }}>No pending approvals at the moment.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {pendingApprovals.map(item => (
+                  <div key={item.userId} className="glass-card" style={{ padding: '0.9rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{item.name}</div>
+                      <div style={{ color: '#a0b4c4', fontSize: '0.82rem' }}>{item.email} · {item.requestedRole.replace('ROLE_', '')}</div>
+                      <div style={{ marginTop: '0.4rem' }}>
+                        <span className="badge" style={{ background: item.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : item.status === 'REJECTED' ? 'rgba(255,107,107,0.15)' : 'rgba(245,158,11,0.15)', color: item.status === 'ACTIVE' ? '#86efac' : item.status === 'REJECTED' ? '#ff6b6b' : '#f59e0b', border: `1px solid ${item.status === 'ACTIVE' ? '#86efac' : item.status === 'REJECTED' ? '#ff6b6b' : '#f59e0b'}` }}>{item.status}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-primary" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleApproveUser(item.userId)}>Approve</button>
+                      <button className="btn-outline" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }} onClick={() => handleRejectUser(item.userId)}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Charts Row 1 */}
@@ -603,6 +742,143 @@ export const OwnerPortal = ({ user }) => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* USERS TAB */}
+      {tab === 'users' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontWeight: 700 }}>Website Users ({users.length})</h3>
+              <p style={{ color: '#a0b4c4', marginTop: '0.35rem' }}>View every account registered on the platform, including roles and contact details.</p>
+            </div>
+            <div className="badge" style={{ background: '#0f172a', color: '#7dd3fc', border: '1px solid rgba(125,211,252,0.3)' }}>{users.length} users</div>
+          </div>
+          {users.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+              <p>No user records available yet.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(125,211,252,0.15)' }}>
+                    {['ID', 'Name', 'Email', 'Phone', 'Roles', 'Status', 'Created'].map(h => (
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#a0b4c4', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#7dd3fc' }}>{u.id}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{u.name}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{u.email}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{u.phone}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#c8a0f0', fontSize: '0.85rem' }}>{(u.roles || []).map(role => role.name?.replace('ROLE_', '')).join(', ')}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge" style={{ background: u.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: u.status === 'ACTIVE' ? '#86efac' : '#f59e0b', border: `1px solid ${u.status === 'ACTIVE' ? '#86efac' : '#f59e0b'}` }}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN') : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SETTINGS TAB */}
+      {tab === 'settings' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontWeight: 700 }}>Landing Page & Pricing Settings</h3>
+              <p style={{ color: '#a0b4c4', marginTop: '0.35rem' }}>Update gym information, contact details, and membership pricing from one owner-only screen.</p>
+            </div>
+            <Settings size={24} color="#7dd3fc" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            {[
+              { label: 'Gym Name', field: 'gymName' },
+              { label: 'Logo URL', field: 'logoUrl' },
+              { label: 'Address', field: 'address' },
+              { label: 'Phone', field: 'phone' },
+              { label: 'Email', field: 'email' },
+              { label: 'Opening Hours', field: 'openingHours' },
+              { label: 'Holidays', field: 'holidays' },
+              { label: 'UPI ID', field: 'upiId' },
+            ].map(item => (
+              <div key={item.field} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>{item.label}</label>
+                <input
+                  className="glass-input"
+                  value={settingsForm[item.field]}
+                  onChange={e => setSettingsForm({ ...settingsForm, [item.field]: e.target.value })}
+                  placeholder={item.label}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="btn-primary" onClick={handleSaveSettings} disabled={savingSettings} style={{ marginBottom: '2rem' }}>
+            {savingSettings ? 'Saving...' : 'Save Landing Page Settings'}
+          </button>
+
+          <div style={{ marginTop: '2rem' }}>
+            <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Membership Plan Pricing</h4>
+            {membershipPlans.length === 0 ? (
+              <p style={{ color: '#a0b4c4' }}>No active membership plans found.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {membershipPlans.map(plan => (
+                  <div key={plan.id} className="glass-card" style={{ padding: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                      <div>
+                        <h5 style={{ fontWeight: 700 }}>{plan.title}</h5>
+                        <p style={{ color: '#a0b4c4', fontSize: '0.85rem' }}>Duration: {plan.durationMonths} month{plan.durationMonths > 1 ? 's' : ''}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={() => handleSavePlan(plan.id)} disabled={planUpdateLoading}>
+                          Save Price
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Price (INR)</label>
+                        <input className="glass-input" type="number" value={plan.priceInr || ''} onChange={e => handleMembershipPlanChange(plan.id, 'priceInr', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Visible</label>
+                        <select className="glass-input" value={plan.isActive ? 'active' : 'inactive'} onChange={e => handleMembershipPlanChange(plan.id, 'isActive', e.target.value === 'active')}>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Popular</label>
+                        <select className="glass-input" value={plan.isPopular ? 'yes' : 'no'} onChange={e => handleMembershipPlanChange(plan.id, 'isPopular', e.target.value === 'yes')}>
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Plan Name</label>
+                        <input className="glass-input" value={plan.title || ''} onChange={e => handleMembershipPlanChange(plan.id, 'title', e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

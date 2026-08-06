@@ -34,6 +34,9 @@ public class Member {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
+    @Column(name = "fitness_goal", length = 255)
+    private String fitnessGoal;
+
     @Column(length = 255)
     private String address;
 
