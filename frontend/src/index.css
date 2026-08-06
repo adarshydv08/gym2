@@ -67,6 +67,17 @@ body {
   font-size: 0.95rem;
   outline: none;
   transition: all 0.2s ease;
+  color-scheme: dark;
+}
+
+.glass-input[type="date"],
+.glass-input[type="time"] {
+  color-scheme: dark;
+}
+
+.glass-input[type="date"]::-webkit-calendar-picker-indicator,
+.glass-input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.4);
 }
 
 .glass-input:focus {

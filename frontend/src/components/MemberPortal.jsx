@@ -13,6 +13,9 @@ export const MemberPortal = ({ user }) => {
   const [bookings, setBookings] = useState([]);
   const [payments, setPayments] = useState([]);
   const [workouts, setWorkouts] = useState([]);
+  const [latestWorkout, setLatestWorkout] = useState(null);
+  const [trainerFeedbacks, setTrainerFeedbacks] = useState([]);
+  const [managerFeedbacks, setManagerFeedbacks] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [allClasses, setAllClasses] = useState([]);
@@ -62,6 +65,11 @@ export const MemberPortal = ({ user }) => {
         apiClient.get(`/workouts/member/${mid}`)
           .then(r => setWorkouts(r.data || []))
           .catch(() => setWorkouts([])),
+        apiClient.get(`/members/${mid}/workout-plan/latest`)
+          .then(r => setLatestWorkout(r.data || null))
+          .catch(() => setLatestWorkout(null)),
+        apiClient.get(`/trainers/member/${mid}/trainer-feedbacks`).then(r => setTrainerFeedbacks(r.data || [])).catch(() => setTrainerFeedbacks([])),
+        apiClient.get(`/managers/member/${mid}/manager-feedbacks`).then(r => setManagerFeedbacks(r.data || [])).catch(() => setManagerFeedbacks([])),
         apiClient.get(`/tickets/member/${mid}`)
           .then(r => setComplaints(r.data || []))
           .catch(() => setComplaints([]))
@@ -403,6 +411,36 @@ export const MemberPortal = ({ user }) => {
               </button>
             ))}
           </div>
+          {latestWorkout && (
+            <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.25rem' }}>
+              <h4 style={{ margin: 0, fontWeight: 700 }}>Latest Workout Plan</h4>
+              <div style={{ color: '#a0b4c4', marginTop: '0.5rem' }}>{latestWorkout.title} · {latestWorkout.goal}</div>
+              <div style={{ marginTop: '0.75rem', fontSize: '0.9rem' }}>{latestWorkout.notes || 'No notes provided.'}</div>
+              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {(latestWorkout.exercises || []).slice(0,3).map(ex => (
+                  <div key={ex.id} className="badge" style={{ background: 'rgba(125,211,252,0.06)', border: '1px solid rgba(125,211,252,0.08)', color: '#e0f2fe' }}>{ex.exerciseName} · {ex.sets}x{ex.reps}</div>
+                ))}
+                { (latestWorkout.exercises || []).length > 3 && <div style={{ color: '#a0b4c4' }}>+{(latestWorkout.exercises || []).length - 3} more</div> }
+              </div>
+            </div>
+          )}
+          {(trainerFeedbacks.length > 0 || managerFeedbacks.length > 0) && (
+            <div className="glass-panel" style={{ padding: '1rem', marginTop: '1rem' }}>
+              <h4 style={{ margin: 0, fontWeight: 800 }}>Feedback</h4>
+              {trainerFeedbacks.map(f => (
+                <div key={f.id} style={{ marginTop: '0.5rem' }}>
+                  <div style={{ fontWeight: 700 }}>{f.trainer?.user?.name || 'Trainer' } · <span style={{ color: '#7dd3fc' }}>{f.rating || '-'/5}</span></div>
+                  <div style={{ color: '#a0b4c4' }}>{f.message}</div>
+                </div>
+              ))}
+              {managerFeedbacks.map(f => (
+                <div key={f.id} style={{ marginTop: '0.5rem' }}>
+                  <div style={{ fontWeight: 700 }}>Manager · <span style={{ color: '#7dd3fc' }}>{new Date(f.createdAt).toLocaleDateString()}</span></div>
+                  <div style={{ color: '#a0b4c4' }}>{f.message}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 

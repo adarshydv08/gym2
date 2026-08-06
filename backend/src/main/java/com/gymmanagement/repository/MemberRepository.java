@@ -10,4 +10,5 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByUserId(Long userId);
     Optional<Member> findByMembershipNumber(String membershipNumber);
     Long countByStatus(String status);
+    java.util.List<Member> findByAssignedTrainerId(Long trainerId);
 }

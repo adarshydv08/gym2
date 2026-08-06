@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
-import { Dumbbell, Star, Clock, Users, ChevronRight, MapPin, Phone, Mail, Zap, Award, TrendingUp, Shield, IndianRupee } from 'lucide-react';
+import { Dumbbell, Star, Clock, Calendar, Users, ChevronRight, MapPin, Phone, Mail, Zap, Award, TrendingUp, Shield, IndianRupee } from 'lucide-react';
 
 const STATIC_TRAINERS = [
   { id: 1, name: 'Arjun Mehta', specialization: 'Strength & Conditioning', experience_years: 6, rating: 4.9, certifications: 'ACE, CSCS', monthly_rate: 4999 },
@@ -28,12 +28,36 @@ const CATEGORY_COLORS = { HIIT: '#ff6b6b', Yoga: '#c8a0f0', CrossFit: '#7dd3fc',
 export const PublicWebsite = ({ onOpenAuth }) => {
   const [plans, setPlans] = useState(STATIC_PLANS);
   const [trainers, setTrainers] = useState(STATIC_TRAINERS);
+  const [classes, setClasses] = useState(STATIC_CLASSES);
   const [counts, setCounts] = useState({ members: 162, classes: 4, trainers: 4 });
+  const [appointmentForm, setAppointmentForm] = useState({ name: '', email: '', phone: '', preferredService: '', preferredDate: '', preferredTime: '', message: '' });
+  const [appointmentStatus, setAppointmentStatus] = useState('');
+  const [appointmentError, setAppointmentError] = useState('');
 
   useEffect(() => {
     apiClient.get('/membership-plans').then(r => { if (r.data?.length) setPlans(r.data); }).catch(() => {});
-    apiClient.get('/trainers').then(r => { if (r.data?.length) setTrainers(r.data); }).catch(() => {});
+    apiClient.get('/trainers').then(r => { if (r.data?.length) { setTrainers(r.data); setCounts(counts => ({ ...counts, trainers: r.data.length })); }}).catch(() => {});
+    apiClient.get('/classes').then(r => { if (r.data?.length) { setClasses(r.data); setCounts(counts => ({ ...counts, classes: r.data.length })); }}).catch(() => {});
   }, []);
+
+  const handleAppointmentSubmit = async (e) => {
+    e.preventDefault();
+    setAppointmentStatus('');
+    setAppointmentError('');
+
+    if (!appointmentForm.name || !appointmentForm.email || !appointmentForm.phone || !appointmentForm.preferredService) {
+      setAppointmentError('Please fill in the required fields before submitting.');
+      return;
+    }
+
+    try {
+      await apiClient.post('/appointments', appointmentForm);
+      setAppointmentStatus('Appointment request submitted! Our team will contact you soon.');
+      setAppointmentForm({ name: '', email: '', phone: '', preferredService: '', preferredDate: '', preferredTime: '', message: '' });
+    } catch (err) {
+      setAppointmentError(err.message || 'Unable to submit request. Please try again later.');
+    }
+  };
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
@@ -54,9 +78,6 @@ export const PublicWebsite = ({ onOpenAuth }) => {
           Premium fitness facility with world-class equipment, expert trainers, and a community that pushes you to your limit. Civil Lines, Roorkee, Uttarakhand.
         </p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button className="btn-primary" onClick={onOpenAuth} style={{ padding: '1rem 2rem', fontSize: '1rem' }}>
-            Start Your Journey <ChevronRight size={18} />
-          </button>
           <a href="tel:+919876543210" className="btn-outline" style={{ padding: '1rem 2rem', fontSize: '1rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
             <Phone size={16} /> Call Now
           </a>
@@ -65,15 +86,58 @@ export const PublicWebsite = ({ onOpenAuth }) => {
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginTop: '4rem', maxWidth: '600px', margin: '4rem auto 0' }}>
           {[
-            { value: '162+', label: 'Active Members' },
-            { value: '4', label: 'Expert Trainers' },
-            { value: '4', label: 'Weekly Classes' },
+            { value: `${counts.members}+`, label: 'Active Members' },
+            { value: `${counts.trainers}`, label: 'Expert Trainers' },
+            { value: `${counts.classes}`, label: 'Weekly Classes' },
           ].map(stat => (
             <div key={stat.label} className="glass-card" style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 800, color: '#7dd3fc' }}>{stat.value}</div>
               <div style={{ fontSize: '0.8rem', color: '#a0b4c4', marginTop: '0.25rem' }}>{stat.label}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* APPOINTMENT REQUESTS */}
+      <section style={{ padding: '4rem 0' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '0.75rem' }}>
+            Book a <span style={{ color: '#7dd3fc' }}>Free Trial</span>
+          </h2>
+          <p style={{ color: '#a0b4c4', maxWidth: '700px', margin: '0 auto' }}>Send an appointment request instantly and our team will reach out with booking details.</p>
+        </div>
+        <div className="glass-panel" style={{ padding: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontWeight: 700, marginBottom: '0.75rem' }}>Start with a Personal Consultation</h3>
+              <p style={{ color: '#a0b4c4' }}>Tell us what you want, and one of our trainers will contact you to schedule your first session.</p>
+            </div>
+            <div style={{ background: '#0f172a', borderRadius: '18px', padding: '1.5rem', color: '#e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                <Zap size={20} color="#7dd3fc" />
+                <span style={{ fontWeight: 700 }}>Fast response guaranteed</span>
+              </div>
+              <p style={{ color: '#a0b4c4' }}>Your request is sent directly to our owner and manager team for immediate follow-up.</p>
+            </div>
+          </div>
+          <form onSubmit={handleAppointmentSubmit} style={{ display: 'grid', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <input className="glass-input" type="text" placeholder="Full name" value={appointmentForm.name} onChange={e => setAppointmentForm({ ...appointmentForm, name: e.target.value })} required />
+              <input className="glass-input" type="email" placeholder="Email address" value={appointmentForm.email} onChange={e => setAppointmentForm({ ...appointmentForm, email: e.target.value })} required />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <input className="glass-input" type="tel" placeholder="Phone number" value={appointmentForm.phone} onChange={e => setAppointmentForm({ ...appointmentForm, phone: e.target.value })} required />
+              <input className="glass-input" type="text" placeholder="Preferred service" value={appointmentForm.preferredService} onChange={e => setAppointmentForm({ ...appointmentForm, preferredService: e.target.value })} required />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <input className="glass-input" type="date" value={appointmentForm.preferredDate} onChange={e => setAppointmentForm({ ...appointmentForm, preferredDate: e.target.value })} />
+              <input className="glass-input" type="time" value={appointmentForm.preferredTime} onChange={e => setAppointmentForm({ ...appointmentForm, preferredTime: e.target.value })} />
+            </div>
+            <textarea className="glass-input" rows={4} placeholder="Tell us what you'd like to achieve" value={appointmentForm.message} onChange={e => setAppointmentForm({ ...appointmentForm, message: e.target.value })} />
+            {appointmentStatus && <div className="alert success">{appointmentStatus}</div>}
+            {appointmentError && <div className="alert error">{appointmentError}</div>}
+            <button type="submit" className="btn-primary" style={{ width: 'fit-content' }}>Send Request</button>
+          </form>
         </div>
       </section>
 
@@ -156,7 +220,7 @@ export const PublicWebsite = ({ onOpenAuth }) => {
           </h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-          {STATIC_CLASSES.map((cls, i) => {
+          {classes.map((cls, i) => {
             const color = CATEGORY_COLORS[cls.category] || '#7dd3fc';
             return (
               <div key={i} className="glass-panel" style={{ padding: '1.5rem', borderLeft: `3px solid ${color}` }}>
@@ -166,9 +230,9 @@ export const PublicWebsite = ({ onOpenAuth }) => {
                     {cls.category}
                   </span>
                 </div>
-                <p style={{ color: '#a0b4c4', fontSize: '0.85rem', marginBottom: '0.75rem' }}>with {cls.trainer}</p>
+                <p style={{ color: '#a0b4c4', fontSize: '0.85rem', marginBottom: '0.75rem' }}>with {cls.trainer?.user?.name || cls.trainer || 'Staff'}</p>
                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#a0b4c4' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Clock size={13} /> {cls.day} · {cls.time}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Clock size={13} /> {cls.dayOfWeek || cls.day} · {cls.startTime || cls.time}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Users size={13} /> {cls.capacity} seats</span>
                 </div>
               </div>

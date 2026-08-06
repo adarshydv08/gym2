@@ -71,6 +71,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     apiClient.setToken(null);
+    localStorage.removeItem('ironfit_token');
     localStorage.removeItem('ironfit_user');
     setUser(null);
   };

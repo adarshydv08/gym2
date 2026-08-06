@@ -3,7 +3,9 @@ import { useAuth } from '../context/AuthContext';
 import { Dumbbell, X, User, Mail, Phone, Lock, Eye, EyeOff, Shield, Crown, Users } from 'lucide-react';
 
 const ROLES = [
+  { id: 'ROLE_OWNER', label: 'Owner', icon: Crown, color: '#f59e0b', desc: 'Full gym management access' },
   { id: 'ROLE_MANAGER', label: 'Manager', icon: Shield, color: '#88b4cc', desc: 'Operations & staff access' },
+  { id: 'ROLE_TRAINER', label: 'Trainer', icon: Dumbbell, color: '#7dd3fc', desc: 'Trainer dashboard and member plans' },
   { id: 'ROLE_MEMBER', label: 'Member', icon: Users, color: '#7dd3fc', desc: 'Personal fitness portal' },
 ];
 
@@ -26,7 +28,7 @@ export const LoginModal = ({ onClose }) => {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(form.identifier, form.password, null);
+        await login(form.identifier, form.password, selectedRole);
         onClose();
       } else {
         if (form.password !== form.confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
@@ -125,10 +127,20 @@ export const LoginModal = ({ onClose }) => {
           )}
 
           {mode === 'login' && (
-            <div style={{ position: 'relative' }}>
-              <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#a0b4c4' }} />
-              <input className="glass-input" name="identifier" placeholder="Email or +91 Mobile Number" value={form.identifier} onChange={handleChange} required style={{ paddingLeft: '2.75rem' }} />
-            </div>
+            <>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#a0b4c4' }} />
+                <input className="glass-input" name="identifier" placeholder="Email or +91 Mobile Number" value={form.identifier} onChange={handleChange} required style={{ paddingLeft: '2.75rem' }} />
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#a0b4c4', marginBottom: '0.45rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Login as</label>
+                <select className="glass-input" value={selectedRole} onChange={e => setSelectedRole(e.target.value)}>
+                  {ROLES.map(role => (
+                    <option key={role.id} value={role.id}>{role.label}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
 
           <div style={{ position: 'relative' }}>

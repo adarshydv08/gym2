@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
-import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, IndianRupee, Activity, Dumbbell, AlertTriangle, TrendingUp, UserCheck, Calendar, ChevronRight, RefreshCw } from 'lucide-react';
 
 const GLASS_COLORS = ['#7dd3fc', '#c8a0f0', '#88b4cc', '#f9a8d4', '#86efac'];
@@ -25,24 +25,33 @@ export const OwnerPortal = ({ user }) => {
   const [managers, setManagers] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [appointments, setAppointments] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [tab, setTab] = useState('dashboard');
+  const [appointmentFilter, setAppointmentFilter] = useState('ALL');
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyAppointmentId, setReplyAppointmentId] = useState(null);
+  const [replyMessage, setReplyMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   const [showAddTrainer, setShowAddTrainer] = useState(false);
   const [trainerForm, setTrainerForm] = useState({ name: '', email: '', phone: '', specialization: '', experienceYears: '' });
   const [showAddAnnouncement, setShowAddAnnouncement] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
+  const [showAssignTrainer, setShowAssignTrainer] = useState(false);
+  const [assignMemberId, setAssignMemberId] = useState(null);
+  const [assignTrainerId, setAssignTrainerId] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [m, mem, tr, comp, ann, man, pay] = await Promise.allSettled([
+      const [m, mem, tr, comp, app, ann, man, pay] = await Promise.allSettled([
         apiClient.get('/reports/owner-dashboard'),
         apiClient.get('/members'),
         apiClient.get('/trainers'),
         apiClient.get('/tickets'),
+        apiClient.get('/appointments'),
         apiClient.get('/announcements'),
         apiClient.get('/managers'),
         apiClient.get('/payments')
@@ -51,10 +60,13 @@ export const OwnerPortal = ({ user }) => {
       if (mem.status === 'fulfilled') setMembers(mem.value.data || []);
       if (tr.status === 'fulfilled') setTrainers(tr.value.data || []);
       if (comp.status === 'fulfilled') setComplaints(comp.value.data || []);
+      if (app.status === 'fulfilled') setAppointments(app.value.data || []);
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
       if (man.status === 'fulfilled') setManagers(man.value.data || []);
       if (pay.status === 'fulfilled') setPayments(pay.value.data || []);
-    } catch { }
+    } catch (err) {
+      console.warn('Owner portal load failed', err.message || err);
+    }
     setLoading(false);
   };
 
@@ -105,7 +117,45 @@ export const OwnerPortal = ({ user }) => {
     }
   };
 
-  const TABS = ['dashboard', 'managers', 'members', 'trainers', 'complaints', 'payments'];
+  const handleMarkAppointmentContacted = async (id) => {
+    try {
+      await apiClient.put(`/appointments/${id}/contacted`, {});
+      load();
+    } catch (err) {
+      alert("Failed to update appointment request: " + err.message);
+    }
+  };
+
+  const handleReplyAppointment = async (id) => {
+    setReplyAppointmentId(id);
+    setShowReplyModal(true);
+  };
+
+  const sendReply = async () => {
+    if (!replyAppointmentId) return;
+    try {
+      await apiClient.post(`/appointments/${replyAppointmentId}/reply`, { message: replyMessage, contactedBy: user?.name || 'Admin' });
+      setShowReplyModal(false);
+      setReplyMessage('');
+      setReplyAppointmentId(null);
+      load();
+      alert('Reply sent and appointment marked contacted.');
+    } catch (err) {
+      alert('Failed to send reply: ' + err.message);
+    }
+  };
+
+  const handleDeleteAppointment = async (id) => {
+    if (!window.confirm("Delete this appointment request?")) return;
+    try {
+      await apiClient.delete(`/appointments/${id}`);
+      load();
+    } catch (err) {
+      alert("Failed to delete appointment request: " + err.message);
+    }
+  };
+
+  const TABS = ['dashboard', 'managers', 'members', 'trainers', 'appointments', 'complaints', 'payments'];
 
   // Fallback demo data
   const data = metrics || {
@@ -126,6 +176,11 @@ export const OwnerPortal = ({ user }) => {
       { name: 'Half-Yearly Pro', value: 45 }, { name: 'Yearly Champion', value: 30 },
       { name: 'Quarterly', value: 15 }, { name: 'Monthly', value: 10 }
     ],
+    membershipGrowth: [
+      { month: 'Feb', members: 120 }, { month: 'Mar', members: 130 },
+      { month: 'Apr', members: 140 }, { month: 'May', members: 150 },
+      { month: 'Jun', members: 160 }, { month: 'Jul', members: 170 }
+    ]
   };
 
   return (
@@ -212,12 +267,23 @@ export const OwnerPortal = ({ user }) => {
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Weekly Attendance Pattern</h3>
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={data.attendanceTrend}>
+              <BarChart data={data.attendanceTrend || []}>
                 <XAxis dataKey="day" stroke="#4a6070" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#4a6070" tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} />
                 <Bar dataKey="attendees" fill="#7dd3fc" radius={[6, 6, 0, 0]} />
               </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Membership Growth</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={data.membershipGrowth || []}>
+                <XAxis dataKey="month" stroke="#4a6070" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#4a6070" tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} />
+                <Line type="monotone" dataKey="members" stroke="#86efac" strokeWidth={2} dot={{ r: 4, fill: '#86efac' }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </>
@@ -303,6 +369,7 @@ export const OwnerPortal = ({ user }) => {
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <button onClick={() => setSelectedMember(m)} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>View</button>
+                        <button onClick={() => { setAssignMemberId(m.id); setShowAssignTrainer(true); }} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>Assign Trainer</button>
                         <button onClick={() => handleDeleteMember(m.id)} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }}>Delete</button>
                       </td>
                     </tr>
@@ -311,6 +378,50 @@ export const OwnerPortal = ({ user }) => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Assign Trainer Modal */}
+      {showAssignTrainer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 800, marginBottom: '0.75rem' }}>Assign Trainer</h3>
+            <p style={{ color: '#a0b4c4', marginBottom: '1rem' }}>Select a trainer to assign to this member.</p>
+            <select className="glass-input" value={assignTrainerId || ''} onChange={e => setAssignTrainerId(Number(e.target.value))}>
+              <option value="">-- Select trainer --</option>
+              {trainers.map(t => (
+                <option key={t.id} value={t.id}>{t.user?.name || t.name} — {t.specialization}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button className="btn-outline" onClick={() => { setShowAssignTrainer(false); setAssignTrainerId(null); setAssignMemberId(null); }}>Cancel</button>
+              <button className="btn-primary" onClick={async () => {
+                if (!assignTrainerId) return alert('Please select a trainer');
+                try {
+                  await apiClient.put(`/members/${assignMemberId}/assign-trainer?trainerId=${assignTrainerId}`);
+                  setShowAssignTrainer(false);
+                  setAssignTrainerId(null);
+                  setAssignMemberId(null);
+                  load();
+                } catch (err) { alert('Failed to assign trainer: ' + (err.message || err)); }
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reply Modal */}
+      {showReplyModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(6px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '640px', padding: '1.25rem' }}>
+            <h3 style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Reply to Appointment Request</h3>
+            <p style={{ color: '#a0b4c4', marginBottom: '0.75rem' }}>Compose a short reply. This will mark the request as contacted.</p>
+            <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} rows={6} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', background: 'transparent', border: '1px solid rgba(125,211,252,0.08)', color: '#e6eef6' }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button className="btn-outline" onClick={() => { setShowReplyModal(false); setReplyMessage(''); setReplyAppointmentId(null); }}>Cancel</button>
+              <button className="btn-primary" onClick={sendReply}>Send Reply</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -361,6 +472,63 @@ export const OwnerPortal = ({ user }) => {
           </div>
         </>
       )}
+
+            {tab === 'appointments' && (
+              <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <h3 style={{ fontWeight: 700 }}>Appointment Requests</h3>
+                    <p style={{ color: '#a0b4c4', marginTop: '0.5rem' }}>Review incoming booking requests from the public website.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    {['ALL', 'NEW', 'CONTACTED'].map(status => (
+                      <button key={status} onClick={() => setAppointmentFilter(status)} className={appointmentFilter === status ? 'btn-primary' : 'btn-outline'} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {appointments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+                    <p>No appointment requests have arrived yet.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {appointments
+                      .filter(req => appointmentFilter === 'ALL' || (appointmentFilter === 'NEW' ? !(req.contacted || req.status === 'CONTACTED') : req.contacted || req.status === 'CONTACTED'))
+                      .map(req => (
+                        <div key={req.id} className="glass-card" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center' }}>
+                          <div>
+                            <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{req.name} · {req.preferredService || 'General request'}</h4>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: '#a0b4c4', fontSize: '0.85rem' }}>
+                              <span>{req.email}</span>
+                              <span>{req.phone}</span>
+                              <span>{req.preferredDate || 'Any date'} {req.preferredTime || ''}</span>
+                            </div>
+                            {req.message && <p style={{ marginTop: '0.75rem', color: '#e0e8f0' }}>{req.message}</p>}
+                          </div>
+                          <div style={{ display: 'grid', gap: '0.5rem', justifyItems: 'end' }}>
+                            <span className="badge" style={{ background: req.contacted || req.status === 'CONTACTED' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: req.contacted || req.status === 'CONTACTED' ? '#86efac' : '#f59e0b' }}>
+                              {req.contacted || req.status === 'CONTACTED' ? 'Contacted' : 'New'}
+                            </span>
+                            {!(req.contacted || req.status === 'CONTACTED') && (
+                              <button className="btn-primary" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleMarkAppointmentContacted(req.id)}>
+                                Mark Contacted
+                              </button>
+                            )}
+                                          <button className="btn-outline" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleReplyAppointment(req.id)}>
+                                            Reply
+                                          </button>
+                            <button className="btn-outline" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }} onClick={() => handleDeleteAppointment(req.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
 
       {/* COMPLAINTS TAB */}
       {tab === 'complaints' && (
@@ -487,6 +655,7 @@ export const OwnerPortal = ({ user }) => {
               <div><span style={{ color: '#a0b4c4' }}>Phone:</span> <br /><strong>{selectedMember.user?.phone}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Emergency Contact:</span> <br /><strong>{selectedMember.emergencyContact || 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Gender:</span> <br /><strong>{selectedMember.gender || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Assigned Trainer:</span> <br /><strong>{selectedMember.assignedTrainer?.user?.name || 'None'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Weight:</span> <br /><strong>{selectedMember.weightKg ? `${selectedMember.weightKg} kg` : 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Height:</span> <br /><strong>{selectedMember.heightCm ? `${selectedMember.heightCm} cm` : 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Blood Group:</span> <br /><strong style={{ color: '#ff6b6b' }}>{selectedMember.bloodGroup || 'N/A'}</strong></div>

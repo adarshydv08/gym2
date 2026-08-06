@@ -2,6 +2,7 @@ package com.gymmanagement.controller;
 
 import com.gymmanagement.dto.ApiResponse;
 import com.gymmanagement.entity.Complaint;
+import com.gymmanagement.dto.CreateComplaintRequest;
 import com.gymmanagement.service.ComplaintService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,13 +31,8 @@ public class ComplaintController {
 
     @PostMapping
     @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<Complaint>> createComplaint(
-            @RequestParam Long memberId,
-            @RequestParam String subject,
-            @RequestParam String description,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String priority) {
-        return ResponseEntity.ok(ApiResponse.success("Ticket raised successfully", complaintService.createComplaint(memberId, subject, description, category, priority)));
+    public ResponseEntity<ApiResponse<Complaint>> createComplaint(@RequestBody CreateComplaintRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Ticket raised successfully", complaintService.createComplaint(request.getMemberId(), request.getSubject(), request.getDescription(), request.getCategory(), request.getPriority())));
     }
 
     @PutMapping("/{id}/status")

@@ -60,7 +60,9 @@ public class AuthService {
             }
         } else {
             activeRole = roles.contains("ROLE_OWNER") ? "ROLE_OWNER" :
-                         roles.contains("ROLE_MANAGER") ? "ROLE_MANAGER" : "ROLE_MEMBER";
+                         roles.contains("ROLE_MANAGER") ? "ROLE_MANAGER" :
+                         roles.contains("ROLE_TRAINER") ? "ROLE_TRAINER" :
+                         "ROLE_MEMBER";
         }
 
         Long memberId = memberRepository.findByUserId(user.getId()).map(Member::getId).orElse(null);
@@ -69,6 +71,34 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .token(jwt)
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .roles(roles)
+                .activeRole(activeRole)
+                .memberId(memberId)
+                .managerId(managerId)
+                .trainerId(trainerId)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse buildAuthResponse(User user) {
+        Set<String> roles = user.getRoles().stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+
+        String activeRole = roles.contains("ROLE_OWNER") ? "ROLE_OWNER" :
+                roles.contains("ROLE_MANAGER") ? "ROLE_MANAGER" :
+                roles.contains("ROLE_TRAINER") ? "ROLE_TRAINER" :
+                "ROLE_MEMBER";
+
+        Long memberId = memberRepository.findByUserId(user.getId()).map(com.gymmanagement.entity.Member::getId).orElse(null);
+        Long managerId = managerRepository.findByUserId(user.getId()).map(com.gymmanagement.entity.Manager::getId).orElse(null);
+        Long trainerId = trainerRepository.findByUserId(user.getId()).map(com.gymmanagement.entity.Trainer::getId).orElse(null);
+
+        return AuthResponse.builder()
                 .userId(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())

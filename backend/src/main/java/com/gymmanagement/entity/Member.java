@@ -53,4 +53,8 @@ public class Member {
     @Builder.Default
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "assigned_trainer_id")
+    private Trainer assignedTrainer;
 }
+ 

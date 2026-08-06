@@ -11,6 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -22,13 +27,38 @@ public class GymClassService {
 
     @Transactional(readOnly = true)
     public List<GymClass> getAllClasses() {
-        return gymClassRepository.findByIsActiveTrue();
+        return gymClassRepository.findByIsActiveTrue().stream()
+                .filter(this::isClassCurrentlyAvailable)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public GymClass getClassById(Long id) {
         return gymClassRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Class not found with id: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<GymClass> getClassesByTrainerId(Long trainerId) {
+        return gymClassRepository.findByTrainerId(trainerId);
+    }
+
+    private boolean isClassCurrentlyAvailable(GymClass gymClass) {
+        if (gymClass.getDayOfWeek() == null || gymClass.getEndTime() == null) {
+            return true;
+        }
+        try {
+            DayOfWeek classDay = DayOfWeek.valueOf(gymClass.getDayOfWeek().toUpperCase(Locale.ENGLISH));
+            LocalTime endTime = LocalTime.parse(gymClass.getEndTime().toUpperCase(Locale.ENGLISH), DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH));
+            LocalTime now = LocalTime.now();
+            DayOfWeek today = LocalDate.now().getDayOfWeek();
+            if (today == classDay && now.isAfter(endTime)) {
+                return false;
+            }
+        } catch (DateTimeParseException | IllegalArgumentException ex) {
+            return true;
+        }
+        return true;
     }
 
     @Transactional

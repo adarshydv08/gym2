@@ -5,6 +5,7 @@ import { LoginModal } from './components/LoginModal';
 import { PublicWebsite } from './components/PublicWebsite';
 import { OwnerPortal } from './components/OwnerPortal';
 import { ManagerPortal } from './components/ManagerPortal';
+import { TrainerPortal } from './components/TrainerPortal';
 import { MemberPortal } from './components/MemberPortal';
 import './index.css';
 
@@ -28,6 +29,7 @@ const AppContent = () => {
     const role = user.activeRole;
     if (role === 'ROLE_OWNER') return <OwnerPortal user={user} />;
     if (role === 'ROLE_MANAGER') return <ManagerPortal user={user} />;
+    if (role === 'ROLE_TRAINER') return <TrainerPortal user={user} />;
     return <MemberPortal user={user} />;
   };
 

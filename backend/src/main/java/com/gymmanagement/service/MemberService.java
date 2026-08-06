@@ -12,6 +12,7 @@ import java.util.List;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final com.gymmanagement.repository.TrainerRepository trainerRepository;
 
     @Transactional(readOnly = true)
     public List<Member> getAllMembers() {
@@ -54,5 +55,19 @@ public class MemberService {
         Long userId = member.getUser().getId();
         memberRepository.delete(member);
         userRepository.deleteById(userId);
+    }
+
+    @Transactional
+    public Member assignTrainer(Long memberId, Long trainerId) {
+        Member member = getMemberById(memberId);
+        var trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new RuntimeException("Trainer not found with id: " + trainerId));
+        member.setAssignedTrainer(trainer);
+        return memberRepository.save(member);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<Member> getMembersByTrainer(Long trainerId) {
+        return memberRepository.findByAssignedTrainerId(trainerId);
     }
 }

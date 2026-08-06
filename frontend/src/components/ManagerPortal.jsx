@@ -8,6 +8,14 @@ export const ManagerPortal = ({ user }) => {
   const [classes, setClasses] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [members, setMembers] = useState([]);
+  const [trainers, setTrainers] = useState([]);
+  const [managerFeedbacks, setManagerFeedbacks] = useState([]);
+  const [showManagerFeedback, setShowManagerFeedback] = useState(false);
+  const [managerFeedbackMemberId, setManagerFeedbackMemberId] = useState(null);
+  const [managerFeedbackMessage, setManagerFeedbackMessage] = useState('');
+  const [showAssignTrainer, setShowAssignTrainer] = useState(false);
+  const [assignMemberId, setAssignMemberId] = useState(null);
+  const [assignTrainerId, setAssignTrainerId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMember, setSelectedMember] = useState(null);
   const [checkInId, setCheckInId] = useState('');
@@ -18,6 +26,10 @@ export const ManagerPortal = ({ user }) => {
     apiClient.get('/classes').then(r => setClasses(r.data || [])).catch(() => {});
     apiClient.get('/tickets').then(r => setComplaints(r.data || [])).catch(() => {});
     apiClient.get('/members').then(r => setMembers(r.data || [])).catch(() => {});
+    apiClient.get('/trainers').then(r => setTrainers(r.data || [])).catch(() => {});
+    if (user?.managerId) {
+      apiClient.get(`/managers/${user.managerId}/feedbacks`).then(r => setManagerFeedbacks(r.data || [])).catch(() => setManagerFeedbacks([]));
+    }
   };
 
   useEffect(() => {
@@ -177,6 +189,8 @@ export const ManagerPortal = ({ user }) => {
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <button onClick={() => handleQuickCheckIn(m.id)} className="btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginRight: '0.4rem' }}>Check In</button>
                         <button onClick={() => setSelectedMember(m)} className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginRight: '0.4rem' }}>View</button>
+                        <button onClick={() => { setAssignMemberId(m.id); setShowAssignTrainer(true); }} className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginRight: '0.4rem' }}>Assign Trainer</button>
+                        <button onClick={() => { setManagerFeedbackMemberId(m.id); setShowManagerFeedback(true); }} className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', marginRight: '0.4rem' }}>Manager Feedback</button>
                         <button onClick={() => handleDeleteMember(m.id)} className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', borderColor: '#ff6b6b', color: '#ff6b6b' }}>Delete</button>
                       </td>
                     </tr>
@@ -185,6 +199,34 @@ export const ManagerPortal = ({ user }) => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {showAssignTrainer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 800, marginBottom: '0.75rem' }}>Assign Trainer</h3>
+            <p style={{ color: '#a0b4c4', marginBottom: '1rem' }}>Select a trainer to assign to this member.</p>
+            <select className="glass-input" value={assignTrainerId || ''} onChange={e => setAssignTrainerId(Number(e.target.value))}>
+              <option value="">-- Select trainer --</option>
+              {trainers.map(t => (
+                <option key={t.id} value={t.id}>{t.user?.name || t.name} — {t.specialization}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button className="btn-outline" onClick={() => { setShowAssignTrainer(false); setAssignTrainerId(null); setAssignMemberId(null); }}>Cancel</button>
+              <button className="btn-primary" onClick={async () => {
+                if (!assignTrainerId) return alert('Please select a trainer');
+                try {
+                  await apiClient.put(`/members/${assignMemberId}/assign-trainer?trainerId=${assignTrainerId}`);
+                  setShowAssignTrainer(false);
+                  setAssignTrainerId(null);
+                  setAssignMemberId(null);
+                  loadData();
+                } catch (err) { alert('Failed to assign trainer: ' + (err.message || err)); }
+              }}>Save</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -260,6 +302,27 @@ export const ManagerPortal = ({ user }) => {
           ))}
         </div>
       )}
+      {showManagerFeedback && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '560px', padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 800, marginBottom: '0.75rem' }}>Add Manager Feedback</h3>
+            <p style={{ color: '#a0b4c4', marginBottom: '1rem' }}>Provide feedback for member #{managerFeedbackMemberId}</p>
+            <textarea className="glass-input" rows={6} value={managerFeedbackMessage} onChange={e => setManagerFeedbackMessage(e.target.value)} placeholder="Write feedback for this member..." />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button className="btn-outline" onClick={() => { setShowManagerFeedback(false); setManagerFeedbackMessage(''); setManagerFeedbackMemberId(null); }}>Cancel</button>
+              <button className="btn-primary" onClick={async () => {
+                if (!user?.managerId) return alert('Manager id missing');
+                try {
+                  await apiClient.post(`/managers/${user.managerId}/feedbacks`, { memberId: managerFeedbackMemberId, message: managerFeedbackMessage });
+                  setShowManagerFeedback(false);
+                  setManagerFeedbackMessage(''); setManagerFeedbackMemberId(null);
+                  apiClient.get(`/managers/${user.managerId}/feedbacks`).then(r => setManagerFeedbacks(r.data || [])).catch(() => {});
+                } catch (err) { alert('Failed to save feedback: ' + err.message); }
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Member Details Modal */}
       {selectedMember && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
@@ -272,6 +335,7 @@ export const ManagerPortal = ({ user }) => {
               <div><span style={{ color: '#a0b4c4' }}>Phone:</span> <br /><strong>{selectedMember.user?.phone}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Emergency Contact:</span> <br /><strong>{selectedMember.emergencyContact || 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Gender:</span> <br /><strong>{selectedMember.gender || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Assigned Trainer:</span> <br /><strong>{selectedMember.assignedTrainer?.user?.name || 'None'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Weight:</span> <br /><strong>{selectedMember.weightKg ? `${selectedMember.weightKg} kg` : 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Height:</span> <br /><strong>{selectedMember.heightCm ? `${selectedMember.heightCm} cm` : 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Blood Group:</span> <br /><strong style={{ color: '#ff6b6b' }}>{selectedMember.bloodGroup || 'N/A'}</strong></div>
