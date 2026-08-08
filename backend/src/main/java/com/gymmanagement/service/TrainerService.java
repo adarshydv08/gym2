@@ -2,6 +2,10 @@ package com.gymmanagement.service;
 
 import com.gymmanagement.entity.Trainer;
 import com.gymmanagement.repository.TrainerRepository;
+import com.gymmanagement.entity.GymClass;
+import com.gymmanagement.entity.WorkoutPlan;
+import com.gymmanagement.repository.GymClassRepository;
+import com.gymmanagement.repository.WorkoutPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +16,8 @@ import java.util.List;
 public class TrainerService {
 
     private final TrainerRepository trainerRepository;
+    private final GymClassRepository gymClassRepository;
+    private final WorkoutPlanRepository workoutPlanRepository;
 
     @Transactional(readOnly = true)
     public List<Trainer> getAllTrainers() {
@@ -34,7 +40,7 @@ public class TrainerService {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .password(passwordEncoder.encode("Password@123"))
-                .status("ACTIVE")
+                .status(com.gymmanagement.entity.UserStatus.ACTIVE)
                 .roles(java.util.Set.of(role))
                 .build();
         var savedUser = userRepository.save(user);
@@ -48,5 +54,24 @@ public class TrainerService {
                 .build();
 
         return trainerRepository.save(trainer);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GymClass> getClassesByTrainerId(Long trainerId) {
+        return gymClassRepository.findByTrainerId(trainerId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkoutPlan> getWorkoutsByTrainerId(Long trainerId) {
+        return workoutPlanRepository.findByTrainerId(trainerId);
+    }
+
+    @Transactional
+    public GymClass assignTrainerToClass(Long trainerId, Long classId) {
+        Trainer trainer = getTrainerById(trainerId);
+        GymClass gymClass = gymClassRepository.findById(classId)
+                .orElseThrow(() -> new RuntimeException("Gym class not found with id: " + classId));
+        gymClass.setTrainer(trainer);
+        return gymClassRepository.save(gymClass);
     }
 }

@@ -11,4 +11,5 @@ public class UpdateMemberProfileRequest {
     private String bloodGroup;
     private String address;
     private String emergencyContact;
+    private String fitnessGoal;
 }

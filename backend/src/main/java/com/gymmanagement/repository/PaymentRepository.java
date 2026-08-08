@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -18,7 +19,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     BigDecimal calculateMonthlyRevenue();
 
     @Query("SELECT YEAR(p.paymentDate), MONTH(p.paymentDate), SUM(p.amountInr) FROM Payment p WHERE p.paymentStatus = 'SUCCESSFUL' AND p.paymentDate >= :startDate GROUP BY YEAR(p.paymentDate), MONTH(p.paymentDate) ORDER BY YEAR(p.paymentDate), MONTH(p.paymentDate)")
-    List<Object[]> getMonthlyRevenueTrend(@org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate);
+    List<Object[]> getMonthlyRevenueTrend(@org.springframework.data.repository.query.Param("startDate") LocalDateTime startDate);
 
     @Query("SELECT mp.title, COUNT(ms) FROM Membership ms JOIN ms.plan mp GROUP BY mp.title ORDER BY COUNT(ms) DESC")
     List<Object[]> getPlanDistribution();

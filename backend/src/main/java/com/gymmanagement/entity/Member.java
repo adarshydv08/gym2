@@ -34,6 +34,9 @@ public class Member {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
+    @Column(name = "fitness_goal", length = 255)
+    private String fitnessGoal;
+
     @Column(length = 255)
     private String address;
 
@@ -53,4 +56,8 @@ public class Member {
     @Builder.Default
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "assigned_trainer_id")
+    private Trainer assignedTrainer;
 }
+ 

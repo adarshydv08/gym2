@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
-import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, IndianRupee, Activity, Dumbbell, AlertTriangle, TrendingUp, UserCheck, Calendar, ChevronRight, RefreshCw } from 'lucide-react';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Users, IndianRupee, Activity, Dumbbell, AlertTriangle, TrendingUp, UserCheck, Calendar, ChevronRight, RefreshCw, Settings } from 'lucide-react';
 
 const GLASS_COLORS = ['#7dd3fc', '#c8a0f0', '#88b4cc', '#f9a8d4', '#86efac'];
 
@@ -25,36 +25,80 @@ export const OwnerPortal = ({ user }) => {
   const [managers, setManagers] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [tab, setTab] = useState('dashboard');
+  const [appointmentFilter, setAppointmentFilter] = useState('ALL');
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [replyAppointmentId, setReplyAppointmentId] = useState(null);
+  const [replyMessage, setReplyMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   const [showAddTrainer, setShowAddTrainer] = useState(false);
-  const [trainerForm, setTrainerForm] = useState({ name: '', email: '', phone: '', specialization: '', experienceYears: '' });
+  const [trainerForm, setTrainerForm] = useState({ name: '', email: '', phone: '', specialization: '', experienceYears: '', certifications: '', bio: '' });
   const [showAddAnnouncement, setShowAddAnnouncement] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
+  const [showAssignTrainer, setShowAssignTrainer] = useState(false);
+  const [assignMemberId, setAssignMemberId] = useState(null);
+  const [assignTrainerId, setAssignTrainerId] = useState(null);
+
+  const [settings, setSettings] = useState({});
+  const [settingsForm, setSettingsForm] = useState({ gymName: '', logoUrl: '', address: '', phone: '', email: '', openingHours: '', holidays: '', upiId: '' });
+  const [users, setUsers] = useState([]);
+  const [membershipPlans, setMembershipPlans] = useState([]);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [planUpdateLoading, setPlanUpdateLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [m, mem, tr, comp, ann, man, pay] = await Promise.allSettled([
+      const [m, mem, tr, comp, app, ann, man, pay, approvals, settingsResp, usersResp, plansResp] = await Promise.allSettled([
         apiClient.get('/reports/owner-dashboard'),
         apiClient.get('/members'),
         apiClient.get('/trainers'),
         apiClient.get('/tickets'),
+        apiClient.get('/appointments'),
         apiClient.get('/announcements'),
         apiClient.get('/managers'),
-        apiClient.get('/payments')
+        apiClient.get('/payments'),
+        apiClient.get('/managers/pending-approvals'),
+        apiClient.get('/settings'),
+        apiClient.get('/users'),
+        apiClient.get('/membership-plans')
       ]);
       if (m.status === 'fulfilled') setMetrics(m.value.data);
       if (mem.status === 'fulfilled') setMembers(mem.value.data || []);
       if (tr.status === 'fulfilled') setTrainers(tr.value.data || []);
       if (comp.status === 'fulfilled') setComplaints(comp.value.data || []);
+      if (app.status === 'fulfilled') setAppointments(app.value.data || []);
       if (ann.status === 'fulfilled') setAnnouncements(ann.value.data || []);
       if (man.status === 'fulfilled') setManagers(man.value.data || []);
       if (pay.status === 'fulfilled') setPayments(pay.value.data || []);
-    } catch { }
+      if (approvals.status === 'fulfilled') setPendingApprovals(approvals.value.data || []);
+      if (settingsResp.status === 'fulfilled') {
+        const payload = settingsResp.value.data || {};
+        setSettings(payload);
+        setSettingsForm({
+          gymName: payload.gymName || '',
+          logoUrl: payload.logoUrl || '',
+          address: payload.address || '',
+          phone: payload.phone || '',
+          email: payload.email || '',
+          openingHours: payload.openingHours || '',
+          holidays: payload.holidays || '',
+          upiId: payload.upiId || ''
+        });
+      }
+      if (usersResp.status === 'fulfilled') setUsers(usersResp.value.data || []);
+      if (plansResp.status === 'fulfilled') setMembershipPlans(plansResp.value.data || []);
+    } catch (err) {
+      console.warn('Owner portal load failed', err.message || err);
+    }
     setLoading(false);
   };
 
@@ -82,15 +126,90 @@ export const OwnerPortal = ({ user }) => {
     }
   };
 
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await apiClient.put('/settings', settingsForm);
+      showToast('Landing page settings updated successfully.', 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to save site settings: ' + err.message, 'error');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleMembershipPlanChange = (planId, field, value) => {
+    setMembershipPlans(prev => prev.map(plan => plan.id === planId ? { ...plan, [field]: value } : plan));
+  };
+
+  const handleSavePlan = async (planId) => {
+    const plan = membershipPlans.find(p => p.id === planId);
+    if (!plan) return;
+    setPlanUpdateLoading(true);
+    try {
+      await apiClient.put(`/membership-plans/${planId}`, {
+        title: plan.title,
+        description: plan.description || '',
+        durationMonths: Number(plan.durationMonths || 0),
+        priceInr: Number(plan.priceInr || 0),
+        benefits: plan.benefits || '',
+        isPopular: Boolean(plan.isPopular),
+        isActive: Boolean(plan.isActive)
+      });
+      showToast(`Membership plan '${plan.title}' updated successfully.`, 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to save membership plan: ' + err.message, 'error');
+    } finally {
+      setPlanUpdateLoading(false);
+    }
+  };
+
   useEffect(() => { load(); }, []);
 
   const handleApproveManager = async (managerId) => {
+    if (!window.confirm('Approve this pending manager request?')) return;
     try {
       await apiClient.put(`/managers/${managerId}/approve`, {});
-      alert("🎉 Manager approved successfully!");
+      showToast('Manager approved successfully.', 'success');
       load();
     } catch (err) {
-      alert("Failed to approve manager: " + err.message);
+      showToast('Failed to approve manager: ' + (err?.message || err), 'error');
+    }
+  };
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    window.setTimeout(() => setToastMessage(''), 5000);
+  };
+
+  const handleApproveUser = async (userId) => {
+    setActionLoading(true);
+    try {
+      await apiClient.put(`/managers/users/${userId}/approve`, {});
+      setPendingApprovals(prev => prev.map(item => item.userId === userId ? { ...item, status: 'ACTIVE' } : item));
+      showToast('Request approved successfully.', 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to approve request: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectUser = async (userId) => {
+    setActionLoading(true);
+    try {
+      await apiClient.put(`/managers/users/${userId}/reject`, {});
+      setPendingApprovals(prev => prev.map(item => item.userId === userId ? { ...item, status: 'REJECTED' } : item));
+      showToast('Request rejected successfully.', 'success');
+      load();
+    } catch (err) {
+      showToast('Failed to reject request: ' + err.message, 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -105,7 +224,45 @@ export const OwnerPortal = ({ user }) => {
     }
   };
 
-  const TABS = ['dashboard', 'managers', 'members', 'trainers', 'complaints', 'payments'];
+  const handleMarkAppointmentContacted = async (id) => {
+    try {
+      await apiClient.put(`/appointments/${id}/contacted`, {});
+      load();
+    } catch (err) {
+      alert("Failed to update appointment request: " + err.message);
+    }
+  };
+
+  const handleReplyAppointment = async (id) => {
+    setReplyAppointmentId(id);
+    setShowReplyModal(true);
+  };
+
+  const sendReply = async () => {
+    if (!replyAppointmentId) return;
+    try {
+      await apiClient.post(`/appointments/${replyAppointmentId}/reply`, { message: replyMessage, contactedBy: user?.name || 'Admin' });
+      setShowReplyModal(false);
+      setReplyMessage('');
+      setReplyAppointmentId(null);
+      load();
+      alert('Reply sent and appointment marked contacted.');
+    } catch (err) {
+      alert('Failed to send reply: ' + err.message);
+    }
+  };
+
+  const handleDeleteAppointment = async (id) => {
+    if (!window.confirm("Delete this appointment request?")) return;
+    try {
+      await apiClient.delete(`/appointments/${id}`);
+      load();
+    } catch (err) {
+      alert("Failed to delete appointment request: " + err.message);
+    }
+  };
+
+  const TABS = ['dashboard', 'managers', 'users', 'members', 'trainers', 'appointments', 'complaints', 'payments', 'settings'];
 
   // Fallback demo data
   const data = metrics || {
@@ -126,6 +283,11 @@ export const OwnerPortal = ({ user }) => {
       { name: 'Half-Yearly Pro', value: 45 }, { name: 'Yearly Champion', value: 30 },
       { name: 'Quarterly', value: 15 }, { name: 'Monthly', value: 10 }
     ],
+    membershipGrowth: [
+      { month: 'Feb', members: 120 }, { month: 'Mar', members: 130 },
+      { month: 'Apr', members: 140 }, { month: 'May', members: 150 },
+      { month: 'Jun', members: 160 }, { month: 'Jul', members: 170 }
+    ]
   };
 
   return (
@@ -142,6 +304,11 @@ export const OwnerPortal = ({ user }) => {
           <RefreshCw size={16} /> Refresh
         </button>
       </div>
+      {toastMessage && (
+        <div className={`alert alert-${toastType}`} style={{ marginBottom: '1rem' }}>
+          {toastMessage}
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
@@ -166,6 +333,34 @@ export const OwnerPortal = ({ user }) => {
             <MetricCard icon={Dumbbell} label="Active Trainers" value={data.activeTrainers} sub="On duty" color="#88b4cc" />
             <MetricCard icon={Calendar} label="Today's Classes" value={data.todayClasses} sub="Scheduled" color="#f9a8d4" />
             <MetricCard icon={AlertTriangle} label="Open Tickets" value={data.openComplaints} sub="Awaiting response" color="#f59e0b" />
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontWeight: 700 }}>Pending Approval Queue</h3>
+              <span className="badge" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid #f59e0b' }}>{pendingApprovals.length} waiting</span>
+            </div>
+            {pendingApprovals.length === 0 ? (
+              <p style={{ color: '#a0b4c4' }}>No pending approvals at the moment.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {pendingApprovals.map(item => (
+                  <div key={item.userId} className="glass-card" style={{ padding: '0.9rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{item.name}</div>
+                      <div style={{ color: '#a0b4c4', fontSize: '0.82rem' }}>{item.email} · {item.requestedRole.replace('ROLE_', '')}</div>
+                      <div style={{ marginTop: '0.4rem' }}>
+                        <span className="badge" style={{ background: item.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : item.status === 'REJECTED' ? 'rgba(255,107,107,0.15)' : 'rgba(245,158,11,0.15)', color: item.status === 'ACTIVE' ? '#86efac' : item.status === 'REJECTED' ? '#ff6b6b' : '#f59e0b', border: `1px solid ${item.status === 'ACTIVE' ? '#86efac' : item.status === 'REJECTED' ? '#ff6b6b' : '#f59e0b'}` }}>{item.status}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-primary" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleApproveUser(item.userId)}>Approve</button>
+                      <button className="btn-outline" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }} onClick={() => handleRejectUser(item.userId)}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Charts Row 1 */}
@@ -212,12 +407,23 @@ export const OwnerPortal = ({ user }) => {
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Weekly Attendance Pattern</h3>
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={data.attendanceTrend}>
+              <BarChart data={data.attendanceTrend || []}>
                 <XAxis dataKey="day" stroke="#4a6070" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#4a6070" tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} />
                 <Bar dataKey="attendees" fill="#7dd3fc" radius={[6, 6, 0, 0]} />
               </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem' }}>Membership Growth</h3>
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={data.membershipGrowth || []}>
+                <XAxis dataKey="month" stroke="#4a6070" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#4a6070" tick={{ fontSize: 11 }} />
+                <Tooltip contentStyle={{ background: '#0f1524', border: '1px solid rgba(125,211,252,0.2)', borderRadius: '8px', color: '#e0e8f0' }} />
+                <Line type="monotone" dataKey="members" stroke="#86efac" strokeWidth={2} dot={{ r: 4, fill: '#86efac' }} />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </>
@@ -303,6 +509,7 @@ export const OwnerPortal = ({ user }) => {
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <button onClick={() => setSelectedMember(m)} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>View</button>
+                        <button onClick={() => { setAssignMemberId(m.id); setShowAssignTrainer(true); }} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>Assign Trainer</button>
                         <button onClick={() => handleDeleteMember(m.id)} className="btn-outline" style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }}>Delete</button>
                       </td>
                     </tr>
@@ -311,6 +518,50 @@ export const OwnerPortal = ({ user }) => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Assign Trainer Modal */}
+      {showAssignTrainer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '1.5rem' }}>
+            <h3 style={{ fontWeight: 800, marginBottom: '0.75rem' }}>Assign Trainer</h3>
+            <p style={{ color: '#a0b4c4', marginBottom: '1rem' }}>Select a trainer to assign to this member.</p>
+            <select className="glass-input" value={assignTrainerId || ''} onChange={e => setAssignTrainerId(Number(e.target.value))}>
+              <option value="">-- Select trainer --</option>
+              {trainers.map(t => (
+                <option key={t.id} value={t.id}>{t.user?.name || t.name} — {t.specialization}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+              <button className="btn-outline" onClick={() => { setShowAssignTrainer(false); setAssignTrainerId(null); setAssignMemberId(null); }}>Cancel</button>
+              <button className="btn-primary" onClick={async () => {
+                if (!assignTrainerId) return alert('Please select a trainer');
+                try {
+                  await apiClient.put(`/members/${assignMemberId}/assign-trainer?trainerId=${assignTrainerId}`);
+                  setShowAssignTrainer(false);
+                  setAssignTrainerId(null);
+                  setAssignMemberId(null);
+                  load();
+                } catch (err) { alert('Failed to assign trainer: ' + (err.message || err)); }
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reply Modal */}
+      {showReplyModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(6px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '640px', padding: '1.25rem' }}>
+            <h3 style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Reply to Appointment Request</h3>
+            <p style={{ color: '#a0b4c4', marginBottom: '0.75rem' }}>Compose a short reply. This will mark the request as contacted.</p>
+            <textarea value={replyMessage} onChange={e => setReplyMessage(e.target.value)} rows={6} style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', background: 'transparent', border: '1px solid rgba(125,211,252,0.08)', color: '#e6eef6' }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <button className="btn-outline" onClick={() => { setShowReplyModal(false); setReplyMessage(''); setReplyAppointmentId(null); }}>Cancel</button>
+              <button className="btn-primary" onClick={sendReply}>Send Reply</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -325,12 +576,14 @@ export const OwnerPortal = ({ user }) => {
           {showAddTrainer && (
             <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Trainer Details</h3>
-              <form onSubmit={handleAddTrainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <input required className="glass-input" placeholder="Name" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.name} onChange={e => setTrainerForm({ ...trainerForm, name: e.target.value })} />
-                <input required className="glass-input" placeholder="Email" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.email} onChange={e => setTrainerForm({ ...trainerForm, email: e.target.value })} />
-                <input required className="glass-input" placeholder="Phone" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.phone} onChange={e => setTrainerForm({ ...trainerForm, phone: e.target.value })} />
-                <input required className="glass-input" placeholder="Specialization" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.specialization} onChange={e => setTrainerForm({ ...trainerForm, specialization: e.target.value })} />
-                <input required type="number" className="glass-input" placeholder="Years of Exp" style={{ flex: 1, minWidth: '150px' }} value={trainerForm.experienceYears} onChange={e => setTrainerForm({ ...trainerForm, experienceYears: e.target.value })} />
+              <form onSubmit={handleAddTrainer} style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
+                <input required className="glass-input" placeholder="Name" value={trainerForm.name} onChange={e => setTrainerForm({ ...trainerForm, name: e.target.value })} />
+                <input required className="glass-input" placeholder="Email" value={trainerForm.email} onChange={e => setTrainerForm({ ...trainerForm, email: e.target.value })} />
+                <input required className="glass-input" placeholder="Phone" value={trainerForm.phone} onChange={e => setTrainerForm({ ...trainerForm, phone: e.target.value })} />
+                <input required className="glass-input" placeholder="Specialization" value={trainerForm.specialization} onChange={e => setTrainerForm({ ...trainerForm, specialization: e.target.value })} />
+                <input required type="number" className="glass-input" placeholder="Years of Experience" value={trainerForm.experienceYears} onChange={e => setTrainerForm({ ...trainerForm, experienceYears: e.target.value })} />
+                <input className="glass-input" placeholder="Certifications" value={trainerForm.certifications} onChange={e => setTrainerForm({ ...trainerForm, certifications: e.target.value })} />
+                <textarea className="glass-input" placeholder="Trainer bio / experience summary" rows={3} value={trainerForm.bio} onChange={e => setTrainerForm({ ...trainerForm, bio: e.target.value })} />
                 <button type="submit" className="btn-primary" style={{ minWidth: '150px' }}>Save Trainer</button>
               </form>
             </div>
@@ -361,6 +614,63 @@ export const OwnerPortal = ({ user }) => {
           </div>
         </>
       )}
+
+            {tab === 'appointments' && (
+              <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <h3 style={{ fontWeight: 700 }}>Appointment Requests</h3>
+                    <p style={{ color: '#a0b4c4', marginTop: '0.5rem' }}>Review incoming booking requests from the public website.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    {['ALL', 'NEW', 'CONTACTED'].map(status => (
+                      <button key={status} onClick={() => setAppointmentFilter(status)} className={appointmentFilter === status ? 'btn-primary' : 'btn-outline'} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {appointments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+                    <p>No appointment requests have arrived yet.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '1rem' }}>
+                    {appointments
+                      .filter(req => appointmentFilter === 'ALL' || (appointmentFilter === 'NEW' ? !(req.contacted || req.status === 'CONTACTED') : req.contacted || req.status === 'CONTACTED'))
+                      .map(req => (
+                        <div key={req.id} className="glass-card" style={{ padding: '1.25rem', display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center' }}>
+                          <div>
+                            <h4 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{req.name} · {req.preferredService || 'General request'}</h4>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: '#a0b4c4', fontSize: '0.85rem' }}>
+                              <span>{req.email}</span>
+                              <span>{req.phone}</span>
+                              <span>{req.preferredDate || 'Any date'} {req.preferredTime || ''}</span>
+                            </div>
+                            {req.message && <p style={{ marginTop: '0.75rem', color: '#e0e8f0' }}>{req.message}</p>}
+                          </div>
+                          <div style={{ display: 'grid', gap: '0.5rem', justifyItems: 'end' }}>
+                            <span className="badge" style={{ background: req.contacted || req.status === 'CONTACTED' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: req.contacted || req.status === 'CONTACTED' ? '#86efac' : '#f59e0b' }}>
+                              {req.contacted || req.status === 'CONTACTED' ? 'Contacted' : 'New'}
+                            </span>
+                            {!(req.contacted || req.status === 'CONTACTED') && (
+                              <button className="btn-primary" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleMarkAppointmentContacted(req.id)}>
+                                Mark Contacted
+                              </button>
+                            )}
+                                          <button className="btn-outline" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleReplyAppointment(req.id)}>
+                                            Reply
+                                          </button>
+                            <button className="btn-outline" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', borderColor: '#ff6b6b', color: '#ff6b6b' }} onClick={() => handleDeleteAppointment(req.id)}>
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
 
       {/* COMPLAINTS TAB */}
       {tab === 'complaints' && (
@@ -438,6 +748,143 @@ export const OwnerPortal = ({ user }) => {
         </div>
       )}
 
+      {/* USERS TAB */}
+      {tab === 'users' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontWeight: 700 }}>Website Users ({users.length})</h3>
+              <p style={{ color: '#a0b4c4', marginTop: '0.35rem' }}>View every account registered on the platform, including roles and contact details.</p>
+            </div>
+            <div className="badge" style={{ background: '#0f172a', color: '#7dd3fc', border: '1px solid rgba(125,211,252,0.3)' }}>{users.length} users</div>
+          </div>
+          {users.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#a0b4c4' }}>
+              <p>No user records available yet.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(125,211,252,0.15)' }}>
+                    {['ID', 'Name', 'Email', 'Phone', 'Roles', 'Status', 'Created'].map(h => (
+                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#a0b4c4', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#7dd3fc' }}>{u.id}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>{u.name}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{u.email}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{u.phone}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#c8a0f0', fontSize: '0.85rem' }}>{(u.roles || []).map(role => role.name?.replace('ROLE_', '')).join(', ')}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span className="badge" style={{ background: u.status === 'ACTIVE' ? 'rgba(134,239,172,0.15)' : 'rgba(245,158,11,0.15)', color: u.status === 'ACTIVE' ? '#86efac' : '#f59e0b', border: `1px solid ${u.status === 'ACTIVE' ? '#86efac' : '#f59e0b'}` }}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#a0b4c4', fontSize: '0.85rem' }}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN') : '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SETTINGS TAB */}
+      {tab === 'settings' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontWeight: 700 }}>Landing Page & Pricing Settings</h3>
+              <p style={{ color: '#a0b4c4', marginTop: '0.35rem' }}>Update gym information, contact details, and membership pricing from one owner-only screen.</p>
+            </div>
+            <Settings size={24} color="#7dd3fc" />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            {[
+              { label: 'Gym Name', field: 'gymName' },
+              { label: 'Logo URL', field: 'logoUrl' },
+              { label: 'Address', field: 'address' },
+              { label: 'Phone', field: 'phone' },
+              { label: 'Email', field: 'email' },
+              { label: 'Opening Hours', field: 'openingHours' },
+              { label: 'Holidays', field: 'holidays' },
+              { label: 'UPI ID', field: 'upiId' },
+            ].map(item => (
+              <div key={item.field} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>{item.label}</label>
+                <input
+                  className="glass-input"
+                  value={settingsForm[item.field]}
+                  onChange={e => setSettingsForm({ ...settingsForm, [item.field]: e.target.value })}
+                  placeholder={item.label}
+                />
+              </div>
+            ))}
+          </div>
+          <button className="btn-primary" onClick={handleSaveSettings} disabled={savingSettings} style={{ marginBottom: '2rem' }}>
+            {savingSettings ? 'Saving...' : 'Save Landing Page Settings'}
+          </button>
+
+          <div style={{ marginTop: '2rem' }}>
+            <h4 style={{ fontWeight: 700, marginBottom: '1rem' }}>Membership Plan Pricing</h4>
+            {membershipPlans.length === 0 ? (
+              <p style={{ color: '#a0b4c4' }}>No active membership plans found.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {membershipPlans.map(plan => (
+                  <div key={plan.id} className="glass-card" style={{ padding: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                      <div>
+                        <h5 style={{ fontWeight: 700 }}>{plan.title}</h5>
+                        <p style={{ color: '#a0b4c4', fontSize: '0.85rem' }}>Duration: {plan.durationMonths} month{plan.durationMonths > 1 ? 's' : ''}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={() => handleSavePlan(plan.id)} disabled={planUpdateLoading}>
+                          Save Price
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Price (INR)</label>
+                        <input className="glass-input" type="number" value={plan.priceInr || ''} onChange={e => handleMembershipPlanChange(plan.id, 'priceInr', e.target.value)} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Visible</label>
+                        <select className="glass-input" value={plan.isActive ? 'active' : 'inactive'} onChange={e => handleMembershipPlanChange(plan.id, 'isActive', e.target.value === 'active')}>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Popular</label>
+                        <select className="glass-input" value={plan.isPopular ? 'yes' : 'no'} onChange={e => handleMembershipPlanChange(plan.id, 'isPopular', e.target.value === 'yes')}>
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                        <label style={{ color: '#a0b4c4', fontSize: '0.85rem', fontWeight: 600 }}>Plan Name</label>
+                        <input className="glass-input" value={plan.title || ''} onChange={e => handleMembershipPlanChange(plan.id, 'title', e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ANNOUNCEMENTS TAB */}
       {tab === 'announcements' && (
         <>
@@ -487,6 +934,7 @@ export const OwnerPortal = ({ user }) => {
               <div><span style={{ color: '#a0b4c4' }}>Phone:</span> <br /><strong>{selectedMember.user?.phone}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Emergency Contact:</span> <br /><strong>{selectedMember.emergencyContact || 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Gender:</span> <br /><strong>{selectedMember.gender || 'N/A'}</strong></div>
+              <div><span style={{ color: '#a0b4c4' }}>Assigned Trainer:</span> <br /><strong>{selectedMember.assignedTrainer?.user?.name || 'None'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Weight:</span> <br /><strong>{selectedMember.weightKg ? `${selectedMember.weightKg} kg` : 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Height:</span> <br /><strong>{selectedMember.heightCm ? `${selectedMember.heightCm} cm` : 'N/A'}</strong></div>
               <div><span style={{ color: '#a0b4c4' }}>Blood Group:</span> <br /><strong style={{ color: '#ff6b6b' }}>{selectedMember.bloodGroup || 'N/A'}</strong></div>

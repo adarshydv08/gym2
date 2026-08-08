@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Dumbbell, Shield, User, LogOut, LayoutDashboard, Calendar, Flame } from 'lucide-react';
+import { apiClient } from '../api/client';
+import { Dumbbell, Shield, User, LogOut, LayoutDashboard, Calendar, Flame, Bell } from 'lucide-react';
 
-export const Navbar = ({ onOpenAuth, activeTab, setActiveTab }) => {
+export const Navbar = ({ onOpenAuth, activeTab, setActiveTab, onToggleNotifications }) => {
   const { user, logout } = useAuth();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user?.userId) return setUnread(0);
+    apiClient.get(`/notifications/user/${user.userId}/unread-count`).then(r => {
+      setUnread(r.data?.unreadCount || 0);
+    }).catch(() => setUnread(0));
+  }, [user]);
 
   return (
     <nav className="glass-panel" style={{ margin: '1rem 2rem', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: '1rem', zIndex: 100 }}>
@@ -36,17 +45,29 @@ export const Navbar = ({ onOpenAuth, activeTab, setActiveTab }) => {
         </button>
 
         {user && (
-          <button 
-            onClick={() => setActiveTab('portal')}
-            className={activeTab === 'portal' ? 'btn-primary' : 'btn-outline'}
-          >
-            <LayoutDashboard size={16} /> My Portal
-          </button>
+          <>
+            <button 
+              onClick={() => setActiveTab('portal')}
+              className={activeTab === 'portal' ? 'btn-primary' : 'btn-outline'}
+            >
+              <LayoutDashboard size={16} /> My Portal
+            </button>
+
+            {(user.activeRole === 'ROLE_OWNER' || user.activeRole === 'ROLE_MANAGER') && (
+              <button
+                onClick={() => setActiveTab('approvals')}
+                className={activeTab === 'approvals' ? 'btn-primary' : 'btn-outline'}
+                title="Pending approvals"
+              >
+                <Shield size={16} /> Approvals
+              </button>
+            )}
+          </>
         )}
       </div>
 
       {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ textAlign: 'right' }}>
@@ -55,6 +76,10 @@ export const Navbar = ({ onOpenAuth, activeTab, setActiveTab }) => {
                 {user.activeRole ? user.activeRole.replace('ROLE_', '') : 'MEMBER'}
               </span>
             </div>
+            <button onClick={onToggleNotifications} className="btn-outline" title="Notifications" style={{ position: 'relative' }}>
+              <Bell size={16} />
+              {unread > 0 && <span style={{ position: 'absolute', top: -6, right: -6, background: '#ff6b6b', color: '#fff', borderRadius: 8, padding: '0 6px', fontSize: 10 }}>{unread}</span>}
+            </button>
             <button 
               onClick={logout} 
               className="btn-outline" 

@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS members (
     blood_group VARCHAR(5),
     status VARCHAR(20) DEFAULT 'ACTIVE',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    assigned_trainer_id BIGINT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_trainer_id) REFERENCES trainers(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS managers (
@@ -206,6 +208,23 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS appointment_requests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    preferred_service VARCHAR(150),
+    preferred_date VARCHAR(50),
+    preferred_time VARCHAR(50),
+    message TEXT,
+    reply_message TEXT,
+    contacted_by VARCHAR(100),
+    contacted_at DATETIME,
+    status VARCHAR(20) DEFAULT 'NEW',
+    is_contacted BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS announcements (

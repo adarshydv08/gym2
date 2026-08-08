@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Dumbbell, X, User, Mail, Phone, Lock, Eye, EyeOff, Shield, Crown, Users } from 'lucide-react';
+import { Dumbbell, X, User, Mail, Phone, Lock, Eye, EyeOff, Shield, Users } from 'lucide-react';
 
 const ROLES = [
   { id: 'ROLE_MANAGER', label: 'Manager', icon: Shield, color: '#88b4cc', desc: 'Operations & staff access' },
+  { id: 'ROLE_TRAINER', label: 'Trainer', icon: Dumbbell, color: '#7dd3fc', desc: 'Trainer dashboard and member plans' },
   { id: 'ROLE_MEMBER', label: 'Member', icon: Users, color: '#7dd3fc', desc: 'Personal fitness portal' },
 ];
 
 export const LoginModal = ({ onClose }) => {
   const { login, register } = useAuth();
   const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [selectedRole, setSelectedRole] = useState('ROLE_MEMBER');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [form, setForm] = useState({ identifier: '', password: '', name: '', email: '', phone: '', confirmPassword: '', weightKg: '', heightCm: '', bloodGroup: '' });
+  const [form, setForm] = useState({ identifier: '', password: '', name: '', email: '', phone: '', confirmPassword: '', role: 'ROLE_MEMBER', weightKg: '', heightCm: '', bloodGroup: '' });
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -26,13 +26,13 @@ export const LoginModal = ({ onClose }) => {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(form.identifier, form.password, null);
+        await login(form.identifier, form.password);
         onClose();
       } else {
         if (form.password !== form.confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
-        const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role: selectedRole, weightKg: form.weightKg || null, heightCm: form.heightCm || null, bloodGroup: form.bloodGroup || null });
+        const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password, role: form.role || 'ROLE_MEMBER', weightKg: form.weightKg || null, heightCm: form.heightCm || null, bloodGroup: form.bloodGroup || null });
         if (res && res.pending) {
-            setSuccess('Registration successful! Your account is pending owner approval.');
+            setSuccess('Registration successful! Your account is pending approval.');
             setLoading(false);
             return;
         }
@@ -44,7 +44,7 @@ export const LoginModal = ({ onClose }) => {
     setLoading(false);
   };
 
-  const selectedRoleData = ROLES.find(r => r.id === selectedRole);
+  const selectedRoleData = ROLES.find(r => r.id === form.role);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,26,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto' }}>
@@ -73,25 +73,20 @@ export const LoginModal = ({ onClose }) => {
         {mode === 'register' && (
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ fontSize: '0.8rem', color: '#a0b4c4', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '0.75rem' }}>
-              Sign in as
+              Register as
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
               {ROLES.map(role => {
                 const Icon = role.icon;
-                const active = selectedRole === role.id;
+                const active = form.role === role.id;
                 return (
-                  <button type="button" key={role.id} onClick={() => setSelectedRole(role.id)} style={{ padding: '0.75rem 0.5rem', borderRadius: '10px', border: `1px solid ${active ? role.color : 'rgba(125,211,252,0.12)'}`, background: active ? `rgba(${role.color === '#c8a0f0' ? '200,160,240' : role.color === '#88b4cc' ? '136,180,204' : '125,211,252'},0.15)` : 'transparent', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                  <button type="button" key={role.id} onClick={() => setForm(prev => ({ ...prev, role: role.id }))} style={{ padding: '0.75rem 0.5rem', borderRadius: '10px', border: `1px solid ${active ? role.color : 'rgba(125,211,252,0.12)'}`, background: active ? `rgba(${role.color === '#c8a0f0' ? '200,160,240' : role.color === '#88b4cc' ? '136,180,204' : '125,211,252'},0.15)` : 'transparent', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
                     <Icon size={18} color={active ? role.color : '#a0b4c4'} />
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, color: active ? role.color : '#a0b4c4' }}>{role.label}</span>
                   </button>
                 );
               })}
             </div>
-            {selectedRoleData && (
-              <p style={{ fontSize: '0.75rem', color: selectedRoleData.color, textAlign: 'center', marginTop: '0.5rem', opacity: 0.8 }}>
-                {selectedRoleData.desc}
-              </p>
-            )}
           </div>
         )}
 
@@ -111,7 +106,7 @@ export const LoginModal = ({ onClose }) => {
                 <Phone size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#a0b4c4' }} />
                 <input className="glass-input" name="phone" placeholder="+91 Mobile Number" value={form.phone} onChange={handleChange} required style={{ paddingLeft: '2.75rem' }} />
               </div>
-              {selectedRole === 'ROLE_MEMBER' && (
+              {form.role === 'ROLE_MEMBER' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
                   <input className="glass-input" name="weightKg" type="number" placeholder="Weight (kg)" value={form.weightKg} onChange={handleChange} />
                   <input className="glass-input" name="heightCm" type="number" placeholder="Height (cm)" value={form.heightCm} onChange={handleChange} />
@@ -125,10 +120,12 @@ export const LoginModal = ({ onClose }) => {
           )}
 
           {mode === 'login' && (
-            <div style={{ position: 'relative' }}>
-              <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#a0b4c4' }} />
-              <input className="glass-input" name="identifier" placeholder="Email or +91 Mobile Number" value={form.identifier} onChange={handleChange} required style={{ paddingLeft: '2.75rem' }} />
-            </div>
+            <>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#a0b4c4' }} />
+                <input className="glass-input" name="identifier" placeholder="Email or +91 Mobile Number" value={form.identifier} onChange={handleChange} required style={{ paddingLeft: '2.75rem' }} />
+              </div>
+            </>
           )}
 
           <div style={{ position: 'relative' }}>
