@@ -2,6 +2,9 @@
 backend/target/
 backend/.mvn/
 backend/*.jar
+!backend/.mvn/
+!backend/.mvn/wrapper/
+!backend/.mvn/wrapper/maven-wrapper.properties
 
 # Frontend
 frontend/node_modules/
