@@ -47,11 +47,12 @@ The backend will:
 ---
 
 ## Demo Login Accounts
-| Role    | Email               | Password     |
-|---------|---------------------|--------------|
-| Owner   | owner@ironfit.in    | Password@123 |
-| Manager | rahul@ironfit.in    | Password@123 |
-| Member  | rohan@ironfit.in    | Password@123 |
+| Role    | Email                | Password     |
+|---------|--------------------- |--------------|
+| Owner   | owner@ironfit.in     | Password@123 |
+| Manager | manager1@ironfit.in  | Password@123 |
+| Trainer | trainer11@ironfit.in | Password@123 |
+| Member  | tinku@ironfit.in     | Password@123 |
 
 ---
 
