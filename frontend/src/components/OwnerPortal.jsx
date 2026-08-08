@@ -40,7 +40,7 @@ export const OwnerPortal = ({ user }) => {
   const [loading, setLoading] = useState(true);
 
   const [showAddTrainer, setShowAddTrainer] = useState(false);
-  const [trainerForm, setTrainerForm] = useState({ name: '', email: '', phone: '', specialization: '', experienceYears: '' });
+  const [trainerForm, setTrainerForm] = useState({ name: '', email: '', phone: '', specialization: '', experienceYears: '', certifications: '', bio: '' });
   const [showAddAnnouncement, setShowAddAnnouncement] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
   const [showAssignTrainer, setShowAssignTrainer] = useState(false);
@@ -169,12 +169,13 @@ export const OwnerPortal = ({ user }) => {
   useEffect(() => { load(); }, []);
 
   const handleApproveManager = async (managerId) => {
+    if (!window.confirm('Approve this pending manager request?')) return;
     try {
       await apiClient.put(`/managers/${managerId}/approve`, {});
-      alert("🎉 Manager approved successfully!");
+      showToast('Manager approved successfully.', 'success');
       load();
     } catch (err) {
-      alert("Failed to approve manager: " + err.message);
+      showToast('Failed to approve manager: ' + (err?.message || err), 'error');
     }
   };
 
@@ -261,7 +262,7 @@ export const OwnerPortal = ({ user }) => {
     }
   };
 
-  const TABS = ['dashboard', 'users', 'members', 'trainers', 'appointments', 'complaints', 'payments', 'settings'];
+  const TABS = ['dashboard', 'managers', 'users', 'members', 'trainers', 'appointments', 'complaints', 'payments', 'settings'];
 
   // Fallback demo data
   const data = metrics || {
@@ -575,12 +576,14 @@ export const OwnerPortal = ({ user }) => {
           {showAddTrainer && (
             <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
               <h3 style={{ fontWeight: 700, marginBottom: '1rem' }}>New Trainer Details</h3>
-              <form onSubmit={handleAddTrainer} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <input required className="glass-input" placeholder="Name" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.name} onChange={e => setTrainerForm({ ...trainerForm, name: e.target.value })} />
-                <input required className="glass-input" placeholder="Email" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.email} onChange={e => setTrainerForm({ ...trainerForm, email: e.target.value })} />
-                <input required className="glass-input" placeholder="Phone" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.phone} onChange={e => setTrainerForm({ ...trainerForm, phone: e.target.value })} />
-                <input required className="glass-input" placeholder="Specialization" style={{ flex: 1, minWidth: '200px' }} value={trainerForm.specialization} onChange={e => setTrainerForm({ ...trainerForm, specialization: e.target.value })} />
-                <input required type="number" className="glass-input" placeholder="Years of Exp" style={{ flex: 1, minWidth: '150px' }} value={trainerForm.experienceYears} onChange={e => setTrainerForm({ ...trainerForm, experienceYears: e.target.value })} />
+              <form onSubmit={handleAddTrainer} style={{ display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' }}>
+                <input required className="glass-input" placeholder="Name" value={trainerForm.name} onChange={e => setTrainerForm({ ...trainerForm, name: e.target.value })} />
+                <input required className="glass-input" placeholder="Email" value={trainerForm.email} onChange={e => setTrainerForm({ ...trainerForm, email: e.target.value })} />
+                <input required className="glass-input" placeholder="Phone" value={trainerForm.phone} onChange={e => setTrainerForm({ ...trainerForm, phone: e.target.value })} />
+                <input required className="glass-input" placeholder="Specialization" value={trainerForm.specialization} onChange={e => setTrainerForm({ ...trainerForm, specialization: e.target.value })} />
+                <input required type="number" className="glass-input" placeholder="Years of Experience" value={trainerForm.experienceYears} onChange={e => setTrainerForm({ ...trainerForm, experienceYears: e.target.value })} />
+                <input className="glass-input" placeholder="Certifications" value={trainerForm.certifications} onChange={e => setTrainerForm({ ...trainerForm, certifications: e.target.value })} />
+                <textarea className="glass-input" placeholder="Trainer bio / experience summary" rows={3} value={trainerForm.bio} onChange={e => setTrainerForm({ ...trainerForm, bio: e.target.value })} />
                 <button type="submit" className="btn-primary" style={{ minWidth: '150px' }}>Save Trainer</button>
               </form>
             </div>

@@ -1,109 +1,104 @@
 # IronFit — Gym Management (Full-stack)
 
-Lightweight, role-driven gym management system (React + Vite frontend, Spring Boot backend, MySQL or embedded DB). Includes member/trainer management, class scheduling, appointment requests, workout plans, payments and role-based access (OWNER / MANAGER / TRAINER / MEMBER).
+IronFit is a client-ready gym management platform with role-based portals for OWNER / MANAGER / TRAINER / MEMBER. It combines a React + Vite frontend with a Spring Boot backend and supports persistent MySQL storage or quick local development using an embedded database.
 
-Quick contents
-- Quick start
-- Development commands (backend + frontend)
-- Environment variables
-- Useful API endpoints
-- Features
-- Resume-ready bullets (copy-paste)
+## What’s included
+- Owner admin portal with live dashboards, user directory, manager approvals, membership pricing, and landing page settings
+- Manager approval queue for pending trainers, members, and manager onboarding
+- Trainer creation with specialization, experience, certifications, and bio
+- Public appointment booking form and admin review workflow
+- Workout plan CRUD, member assignment, payments, and notifications
+- JWT authentication and Spring Security role-based access
 
-Prerequisites
-- Java 17 / 21 LTS installed (this repo was tested with Java 21)
-- Node.js 18+ (for Vite frontend)
+## Prerequisites
+- Java 17 / 21 LTS installed (tested with Java 21)
+- Node.js 18+ for the Vite frontend
+- MySQL 8+ for persistent storage (recommended)
 - Git (recommended)
-- (Optional) MySQL 8+ if you want a persistent DB; the project can also use an embedded DB for quick runs
 
-Quick start (Windows PowerShell)
-1) Backend — use the included Maven wrapper (no global Maven required):
+## Quick start (Windows PowerShell)
 
+### Backend
 ```powershell
 cd backend
-# set JAVA_HOME to a JDK compatible with the project (example path for Java 21)
 $env:JAVA_HOME='C:\Path\To\jdk-21'
 $env:PATH="$env:JAVA_HOME\bin;" + $env:PATH
 .\mvnw.cmd spring-boot:run
 ```
 
-The backend will start on http://localhost:8080 by default. Swagger UI (if enabled): http://localhost:8080/swagger-ui/index.html
+The backend starts on `http://localhost:8080` by default.
 
-Run backend tests:
-
-```powershell
-cd backend
-.\mvnw.cmd -q clean test
-```
-
-2) Frontend — Vite
-
+### Frontend
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open the app in the browser (default Vite port): http://localhost:5173
+Open the app at `http://localhost:5173`.
 
-Build for production
+### Build for production
 
-Backend (create runnable jar):
-
+Backend:
 ```powershell
 cd backend
 .\mvnw.cmd -DskipTests package
 java -jar target/*-SNAPSHOT.jar
 ```
 
-Frontend (static bundle):
-
+Frontend:
 ```powershell
 cd frontend
 npm run build
-# serve dist locally (optional)
+# optional local preview
 npx serve dist
 ```
 
-Client-ready reset and demo data
-- The backend `data.sql` file has been updated to clear existing seeded/demo tables before inserting only the approved demo accounts.
-- Approved seeded accounts:
-  - `owner@ironfit.in`
-  - `manager1@ironfit.in`
-  - `trainer1@ironfit.in`
-  - `tinku@ironfit.in`
-- To present the site to a client without previous production/demo data, reset the MySQL database and re-run the application so `data.sql` can reseed cleanly.
-- The owner dashboard revenue, attendance, plan distribution, and membership growth charts now reflect real database data.
+## Client-ready demo reset
+To deliver a clean client-ready demo, reset your MySQL database and restart the backend so `backend/src/main/resources/data.sql` can reseed fresh data.
 
-Environment variables (examples)
-- `DB_URL` / `spring.datasource.url` — JDBC URL (e.g., jdbc:mysql://localhost:3306/ironfit_db)
-- `DB_USERNAME` / `spring.datasource.username`
-- `DB_PASSWORD` / `spring.datasource.password`
-- `JWT_SECRET` — secret for signing JWTs (update in `application.yml` or system env)
+The current seed file now clears stale demo records and inserts only approved demo accounts.
+
+### Approved seeded demo accounts
+- `owner@ironfit.in`
+- `manager1@ironfit.in`
+- `trainer1@ironfit.in`
+- `tinku@ironfit.in`
+
+> The owner dashboard now shows real database-driven metrics for revenue, attendance, membership growth, and plan distribution.
+
+## Environment variables
+Backend configuration can be set via `application.yml` or environment variables:
+- `spring.datasource.url` / `DB_URL`
+- `spring.datasource.username` / `DB_USERNAME`
+- `spring.datasource.password` / `DB_PASSWORD`
+- `jwt.secret` / `JWT_SECRET`
 
 If you prefer editing `application.yml` directly, see `backend/src/main/resources/application.yml`.
 
 API summary (selected endpoints)
-- POST `/api/auth/login` — authenticate (returns JWT)
-- POST `/api/auth/register` — register new user
-- POST `/api/appointments` — public: submit appointment request (used by landing page)
-- GET `/api/appointments` — OWNER/MANAGER: list requests
-- PUT `/api/appointments/{id}/contacted` — mark contacted (OWNER/MANAGER)
-- DELETE `/api/appointments/{id}` — delete request (OWNER/MANAGER)
-- GET `/api/trainers` — list trainers
-- GET `/api/workouts` — workout-related CRUD endpoints under `/api/workouts`
-- GET `/api/membership-plans` — membership plans
-- GET `/api/classes` — class schedule
-- PUT `/api/settings` — OWNER: update landing page gym details and contact info
-- PUT `/api/membership-plans/{id}` — OWNER: update membership pricing, visibility, and plan metadata
-- GET `/api/users` — OWNER: view all registered website users
+- `POST /api/auth/login` — authenticate (returns JWT)
+- `POST /api/auth/register` — register new user
+- `POST /api/appointments` — public appointment request submission
+- `GET /api/appointments` — OWNER/MANAGER: list appointment requests
+- `PUT /api/appointments/{id}/contacted` — OWNER/MANAGER: mark request contacted
+- `DELETE /api/appointments/{id}` — OWNER/MANAGER: delete a request
+- `GET /api/trainers` — list all trainers
+- `POST /api/trainers` — OWNER/MANAGER: create a new trainer
+- `GET /api/membership-plans` — active membership plans
+- `PUT /api/membership-plans/{id}` — OWNER: update pricing and visibility
+- `PUT /api/settings` — OWNER: update landing page gym details
+- `GET /api/users` — OWNER: view registered users
+- `GET /api/managers/pending-approvals` — OWNER/MANAGER: pending approval queue
+- `PUT /api/managers/users/{userId}/approve` — approve a pending user
+- `PUT /api/managers/users/{userId}/reject` — reject a pending user
 - Other admin endpoints: `/api/members`, `/api/payments`, `/api/tickets`, `/api/announcements`
 
 Features implemented (high level)
 - Role-based authentication & authorization (JWT + Spring Security)
 - Public landing page with appointment booking form
-- Owner/Manager portal: metrics, member/trainer management, appointment requests review, owner-only landing page settings, membership pricing updates, and website user directory
-- Trainer portal: create/delete workout plans, manage assigned classes
+- Owner/Manager portal: metrics, member/trainer management, approval workflows, membership pricing updates, and user directory
+- Trainer portal: create/delete workout plans, manage assigned classes, and create trainers with specialization and experience metadata
 - Workout plan CRUD and persistence
 - Appointment request entity + notification creation on create
 - React frontend using Vite; structured components and `apiClient` wrapper
