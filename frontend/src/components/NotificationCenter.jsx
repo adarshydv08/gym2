@@ -24,8 +24,8 @@ export const NotificationCenter = ({ onClose }) => {
 
   const markRead = async (id) => {
     try {
-      await apiClient.put(`/notifications/${id}/read`);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      await apiClient.delete(`/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (err) {
       // ignore
     }
