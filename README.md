@@ -186,7 +186,13 @@ This project stores domain data in JPA entities (backend) and persists to SQL ta
 
 If you need a visual diagram or a single CSV/markdown table mapping every file to its table, I can generate that next.
 
-## Short project summary (resume-ready)
+## Demo Login Accounts
+| Role    | Email                | Password     |
+|---------|--------------------- |--------------|
+| Owner   | owner@ironfit.in     | Password@123 |
+| Manager | manager1@ironfit.in  | Password@123 |
+| Trainer | trainer11@ironfit.in | Password@123 |
+| Member  | tinku@ironfit.in     | Password@123 |
 
 IronFit — Full-stack Gym Management Platform (React/Vite | Spring Boot | MySQL)
 
