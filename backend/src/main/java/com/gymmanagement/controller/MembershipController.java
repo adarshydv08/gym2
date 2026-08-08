@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,7 +17,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RestController
-@ConditionalOnProperty(name = "app.disable-membership-controller", havingValue = "false", matchIfMissing = true)
 @RequestMapping("/api/memberships")
 @RequiredArgsConstructor
 public class MembershipController {

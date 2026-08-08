@@ -130,8 +130,8 @@ export const PublicWebsite = ({ onOpenAuth }) => {
               <input className="glass-input" type="text" placeholder="Preferred service" value={appointmentForm.preferredService} onChange={e => setAppointmentForm({ ...appointmentForm, preferredService: e.target.value })} required />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <input className="glass-input" type="date" value={appointmentForm.preferredDate} onChange={e => setAppointmentForm({ ...appointmentForm, preferredDate: e.target.value })} />
-              <input className="glass-input" type="time" value={appointmentForm.preferredTime} onChange={e => setAppointmentForm({ ...appointmentForm, preferredTime: e.target.value })} />
+              <input className="glass-input appointment-date-time" type="date" value={appointmentForm.preferredDate} onChange={e => setAppointmentForm({ ...appointmentForm, preferredDate: e.target.value })} />
+              <input className="glass-input appointment-date-time" type="time" value={appointmentForm.preferredTime} onChange={e => setAppointmentForm({ ...appointmentForm, preferredTime: e.target.value })} />
             </div>
             <textarea className="glass-input" rows={4} placeholder="Tell us what you'd like to achieve" value={appointmentForm.message} onChange={e => setAppointmentForm({ ...appointmentForm, message: e.target.value })} />
             {appointmentStatus && <div className="alert alert-success" role="status">{appointmentStatus}</div>}

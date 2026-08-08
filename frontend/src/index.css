@@ -77,7 +77,16 @@ body {
 
 .glass-input[type="date"]::-webkit-calendar-picker-indicator,
 .glass-input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(1.4);
+  filter: brightness(0) invert(1);
+  opacity: 1;
+}
+
+.appointment-date-time {
+  color-scheme: dark;
+}
+
+.appointment-date-time::-webkit-calendar-picker-indicator {
+  filter: brightness(0) invert(1);
 }
 
 .glass-input:focus {
