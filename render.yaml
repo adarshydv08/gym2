@@ -1,0 +1,61 @@
+services:
+  # Spring Boot Backend API Web Service
+  - type: web
+    name: ironfit-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: ironfit-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ironfit-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: ironfit-postgres
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: ironfit-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: ironfit-postgres
+          property: password
+      - key: DB_DRIVER
+        value: org.postgresql.Driver
+      - key: DB_DIALECT
+        value: org.hibernate.dialect.PostgreSQLDialect
+
+  # Frontend Static Site
+  - type: web
+    name: ironfit-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: ironfit-backend
+          property: url
+
+databases:
+  # Free PostgreSQL Database
+  - name: ironfit-postgres
+    plan: free
+    databaseName: ironfit_db
+    user: ironfit_user
