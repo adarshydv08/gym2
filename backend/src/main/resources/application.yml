@@ -8,7 +8,7 @@ spring:
     name: ironfit-backend
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ironfit_db}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata}
+    url: ${SPRING_DATASOURCE_URL:${DB_URL_SCHEME:jdbc:mysql://}${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ironfit_db}${DB_PARAMS:?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata}}
     username: ${DB_USERNAME:${SPRING_DATASOURCE_USERNAME:root}}
     password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:Yadav@9876}}
     driver-class-name: ${DB_DRIVER:${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}}

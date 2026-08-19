@@ -31,6 +31,10 @@ services:
         fromDatabase:
           name: ironfit-postgres
           property: password
+      - key: DB_URL_SCHEME
+        value: "jdbc:postgresql://"
+      - key: DB_PARAMS
+        value: ""
       - key: DB_DRIVER
         value: org.postgresql.Driver
       - key: DB_DIALECT
