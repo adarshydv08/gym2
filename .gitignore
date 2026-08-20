@@ -17,6 +17,13 @@ frontend/.env
 .vscode/
 *.class
 
-# Secrets
+# Secrets & Envs
 *.env
-!*.env.example
+!.env.example
+
+# Local Tools & Build Output
+tools/
+gym2/
+response.txt
+*.log
+

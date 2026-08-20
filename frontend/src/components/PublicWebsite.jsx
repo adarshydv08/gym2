@@ -242,7 +242,7 @@ export const PublicWebsite = ({ onOpenAuth }) => {
       </section>
 
       {/* GYM INFO */}
-      <section style={{ padding: '4rem 0 6rem' }}>
+      <section style={{ padding: '4rem 0 2rem' }}>
         <div className="glass-panel" style={{ padding: '3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '2rem', textAlign: 'center' }}>
           <div>
             <MapPin size={28} className="icon-accent" style={{ margin: '0 auto 0.75rem', display: 'block' }} />
@@ -261,6 +261,18 @@ export const PublicWebsite = ({ onOpenAuth }) => {
           </div>
         </div>
       </section>
+
+      {/* FOOTER & COPYRIGHT */}
+      <footer style={{ borderTop: '1px solid rgba(125,211,252,0.15)', padding: '2.5rem 1rem', marginTop: '2rem', marginBottom: '2rem', textAlign: 'center', color: '#a0b4c4', fontSize: '0.85rem' }}>
+        <p style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: '0.5rem' }}>
+          © 2026 ARY Websites. All Rights Reserved.
+        </p>
+        <p style={{ maxWidth: '650px', margin: '0 auto', lineHeight: 1.5, fontSize: '0.75rem', opacity: 0.8 }}>
+          Notice: This website, original source code, design, and content are developed by <strong>ARY Websites</strong> and cannot be copied, redistributed, or presented as someone else's work without permission.
+        </p>
+      </footer>
     </div>
   );
 };
+
+
